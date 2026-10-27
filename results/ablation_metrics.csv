@@ -1,0 +1,5 @@
+config_id,description,enable_ast_filter,enable_witness_replay,enforce_contract_version,total_regression_candidates,regressions_caught,regression_recall_pct,caught_by_ast_filter,caught_by_witness_replay,cat6_syntactic_variants_caught,cat6_syntactic_variants_total,cat6_recall_pct,valid_candidates_evaluated,false_blocks_on_valid,false_block_rate_pct,cat5_evolved_contract_false_blocks,inconclusive_on_evolved_contract,final_tasks_resolved,final_resolution_rate_pct,mean_gate_latency_ms
+full_cegar_harness,Full CEGAR-Harness (AST Filter + Witness Replay + Contract Versioning),True,True,True,30,30,100.0,25,5,5,5,100.0,30,0,0.0,0,5,30,100.0,13.743
+ast_filter_only,AST Canonicalization Filter Only (No Behavioral Witness Replay),True,False,True,30,25,83.33,25,0,0,5,0.0,30,0,0.0,0,0,25,83.33,0.381
+witness_replay_only,Behavioral Witness Replay Only (No AST Pre-Filter),False,True,True,30,30,100.0,0,30,5,5,100.0,30,0,0.0,0,5,30,100.0,22.09
+unversioned_ledger,Unversioned Counterexample Ledger (No Contract Version Check),True,True,False,30,30,100.0,25,5,5,5,100.0,30,5,16.67,5,0,25,83.33,13.053

@@ -1,0 +1,7 @@
+category,tasks_count,obs_masking_unblocked_regressions,cegar_ledger_only_unblocked_regressions,cegar_full_unblocked_regressions,cegar_full_resolved,cegar_full_inconclusive_gates
+1_boundary_conditions,5,5,0,0,5,0
+2_parsers_state_machines,5,5,0,0,5,0
+3_exception_handling,5,5,0,0,5,0
+4_multi_file_changes,5,5,0,0,5,0
+5_feature_regressions,5,5,0,0,5,5
+6_syntactic_variants,5,5,5,0,5,0
