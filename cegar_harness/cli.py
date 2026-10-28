@@ -91,6 +91,17 @@ def _cmd_inspect_ledger(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_mcp_serve(args: argparse.Namespace) -> int:
+    from cegar_harness.mcp_server import CEGARMCPServer
+
+    server = CEGARMCPServer(db_path=args.db, jsonl_path=args.telemetry_log)
+    try:
+        server.serve_stdio()
+    finally:
+        server.close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cegar-harness",
@@ -126,6 +137,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_insp.add_argument("--task-id", default=None, help="Filter by specific task_id (e.g. T01)")
     p_insp.set_defaults(func=_cmd_inspect_ledger)
+
+    p_mcp = sub.add_parser("mcp-serve", help="Run the Model Context Protocol (MCP) JSON-RPC 2.0 server over stdio")
+    p_mcp.add_argument(
+        "--db",
+        default="results/counterexamples.sqlite",
+        help="Path to SQLite counterexample ledger",
+    )
+    p_mcp.add_argument(
+        "--telemetry-log",
+        default=None,
+        help="Optional path to JSONL telemetry log file",
+    )
+    p_mcp.set_defaults(func=_cmd_mcp_serve)
 
     return parser
 
