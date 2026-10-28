@@ -14,10 +14,10 @@
 
 | Ablation Config | AST Filter | Witness Replay | Contract Ver. | Precision (%) | Recall (%) | F1 (%) | Cat. 6 Syn. Recall (%) | False Block (%) | Inconclusive | Final Resolved (%) | Median / p95 Latency (ms) |
 | :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `full_cegar_harness` | ON | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.71 / 21.21 |
-| `ast_filter_only` | ON | OFF | ON | 100.00% | 83.33% (25/30) | 90.91% | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.30 / 0.52 |
-| `witness_replay_only` | OFF | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 19.93 / 22.44 |
-| `unversioned_ledger` | ON | ON | OFF | 85.71% | 100.00% (30/30) | 92.31% | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 18.74 / 22.28 |
+| `full_cegar_harness` | ON | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.27 / 20.49 |
+| `ast_filter_only` | ON | OFF | ON | 100.00% | 83.33% (25/30) | 90.91% | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.34 / 0.59 |
+| `witness_replay_only` | OFF | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 19.48 / 23.13 |
+| `unversioned_ledger` | ON | ON | OFF | 85.71% | 100.00% (30/30) | 92.31% | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 17.98 / 20.21 |
 
 ## 3. Experiment A: Per-Category Regression & Convergence Breakdown
 
@@ -32,8 +32,12 @@
 
 ## 4. Experiment B: Multi-Turn Live LLM Agent Repair Loop
 
-- **Status:** `NOT_EXECUTED_NO_CONFIG`
-- **Executed:** `False`
-- **Model:** `none`
-- **Max Post-Compaction Turns:** `3`
-- **Note:** Live LLM experiment not executed: CEGAR_LLM_API_BASE and CEGAR_LLM_MODEL environment variables are not configured.
+- **Status:** `EXECUTED`
+- **Executed:** `True`
+- **Model:** `llama3:latest`
+- **Max Post-Compaction Turns:** `2`
+
+| Strategy | Model | Tasks | Gate Blocked | Unblocked Reg. (%) | Turn-1 Resolved (%) | Final Resolved (%) [95% CI] | Mean LLM Latency (ms) | Prompt / Completion Tokens |
+| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `LOSSY_SUMMARY` | `llama3:latest` | 6 | 0 | 66.67% | 16.67% (1/6) | 16.67% (1/6) [3.0, 56.4] | 9247.2 | 5280 / 684 |
+| `CEGAR_HARNESS_FULL` | `llama3:latest` | 6 | 4 | 0.00% | 50.00% (3/6) | 66.67% (4/6) [30.0, 90.3] | 4915.5 | 5566 / 399 |

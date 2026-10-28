@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -20,6 +22,7 @@ class LLMGenerationResult:
     generated_code: str
     prompt_tokens: int
     completion_tokens: int
+    latency_ms: float = 0.0
     error_message: str = ""
 
 
@@ -29,7 +32,7 @@ class LiveLLMClient:
     Reads configuration from environment variables (or explicit constructor overrides):
       - CEGAR_LLM_API_BASE (e.g., https://api.openai.com/v1 or http://localhost:11434/v1)
       - CEGAR_LLM_API_KEY
-      - CEGAR_LLM_MODEL (e.g., gpt-4o-mini, qwen2.5-coder:7b)
+      - CEGAR_LLM_MODEL (e.g., llama3:latest, qwen2.5-coder:7b, gpt-4o-mini)
 
     If not configured, explicitly reports `NOT_EXECUTED_NO_CONFIG` without fabricating outputs.
     """
@@ -39,7 +42,7 @@ class LiveLLMClient:
         api_base: Optional[str] = None,
         api_key: Optional[str] = None,
         model_name: Optional[str] = None,
-        timeout_seconds: float = 45.0,
+        timeout_seconds: float = 180.0,
     ) -> None:
         self.api_base = (api_base or os.environ.get("CEGAR_LLM_API_BASE", "")).rstrip("/")
         self.api_key = api_key or os.environ.get("CEGAR_LLM_API_KEY", "")
@@ -64,6 +67,7 @@ class LiveLLMClient:
                 generated_code="",
                 prompt_tokens=0,
                 completion_tokens=0,
+                latency_ms=0.0,
                 error_message=(
                     "Live LLM experiment not executed: CEGAR_LLM_API_BASE and CEGAR_LLM_MODEL "
                     "environment variables are not configured."
@@ -78,22 +82,29 @@ class LiveLLMClient:
         user_prompt = compacted_context
         if repair_feedback:
             feedback_block = "\n".join(repair_feedback)
-            user_prompt = f"{compacted_context}\n\n[POST-COMPACTION SELF-REPAIR FEEDBACK]\n{feedback_block}\n"
+            user_prompt = (
+                f"{compacted_context}\n\n"
+                f"[POST-COMPACTION SELF-REPAIR FEEDBACK]\n{feedback_block}\n"
+                f"Output ONLY the corrected Python source code for `{target_file}` inside a ```python ... ``` block."
+            )
 
         payload = {
             "model": self.model_name,
             "temperature": 0.0,
+            "max_tokens": 320,
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        f"Return ONLY valid Python code for `{target_file}` that satisfies the specification "
-                        "and avoids any refuted counterexamples."
+                        f"You are an autonomous Python code repair agent. Return ONLY valid, complete Python code "
+                        f"for `{target_file}` enclosed in a ```python ... ``` block. Do not include explanations, "
+                        "test functions, or markdown prose outside the code block."
                     ),
                 },
                 {"role": "user", "content": user_prompt},
             ],
         }
+        t0 = time.perf_counter()
         try:
             req = urllib.request.Request(
                 url,
@@ -103,6 +114,7 @@ class LiveLLMClient:
             )
             with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
                 body = json.loads(resp.read().decode("utf-8"))
+                elapsed_ms = (time.perf_counter() - t0) * 1000.0
                 content = body["choices"][0]["message"]["content"]
                 usage = body.get("usage", {})
                 return LLMGenerationResult(
@@ -112,8 +124,10 @@ class LiveLLMClient:
                     generated_code=self._strip_markdown_fences(content),
                     prompt_tokens=int(usage.get("prompt_tokens", 0)),
                     completion_tokens=int(usage.get("completion_tokens", 0)),
+                    latency_ms=round(elapsed_ms, 2),
                 )
         except Exception as exc:
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
             return LLMGenerationResult(
                 executed=False,
                 status="EXECUTION_ERROR",
@@ -121,14 +135,19 @@ class LiveLLMClient:
                 generated_code="",
                 prompt_tokens=0,
                 completion_tokens=0,
+                latency_ms=round(elapsed_ms, 2),
                 error_message=str(exc),
             )
 
     @staticmethod
     def _strip_markdown_fences(text: str) -> str:
+        match = re.search(r"```(?:python|py)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE)
+        if match:
+            return match.group(1).strip() + "\n"
         lines = text.strip().splitlines()
         if lines and lines[0].startswith("```"):
             lines = lines[1:]
         if lines and lines[-1].startswith("```"):
             lines = lines[:-1]
         return "\n".join(lines).strip() + "\n"
+

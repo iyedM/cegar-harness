@@ -1,5 +1,5 @@
 {
-  "generated_at_epoch": 1793184167.4461162,
+  "generated_at_epoch": 1793188140.985676,
   "benchmark_version": "0.2.0",
   "max_oracle_turns": 2,
   "experiment_a_controlled_replay": {
@@ -143,9 +143,9 @@
         "resolution_ci95_low_pct": 78.68,
         "resolution_ci95_high_pct": 98.15,
         "mean_oracle_turns_to_convergence": 1.3,
-        "mean_gate_latency_ms": 24.05,
-        "median_gate_latency_ms": 19.828,
-        "p95_gate_latency_ms": 39.669
+        "mean_gate_latency_ms": 23.044,
+        "median_gate_latency_ms": 19.172,
+        "p95_gate_latency_ms": 39.111
       }
     ],
     "ablation_study": [
@@ -172,11 +172,11 @@
         "inconclusive_on_evolved_contract": 5,
         "final_tasks_resolved": 30,
         "final_resolution_rate_pct": 100.0,
-        "mean_gate_latency_ms": 11.604,
-        "median_gate_latency_ms": 18.714,
-        "p95_gate_latency_ms": 21.207,
-        "mean_ledger_overhead_ms": 0.361,
-        "mean_replay_overhead_ms": 11.152
+        "mean_gate_latency_ms": 11.545,
+        "median_gate_latency_ms": 18.273,
+        "p95_gate_latency_ms": 20.486,
+        "mean_ledger_overhead_ms": 0.346,
+        "mean_replay_overhead_ms": 11.1
       },
       {
         "config_id": "ast_filter_only",
@@ -201,10 +201,10 @@
         "inconclusive_on_evolved_contract": 0,
         "final_tasks_resolved": 25,
         "final_resolution_rate_pct": 83.33,
-        "mean_gate_latency_ms": 0.308,
-        "median_gate_latency_ms": 0.297,
-        "p95_gate_latency_ms": 0.523,
-        "mean_ledger_overhead_ms": 0.307,
+        "mean_gate_latency_ms": 0.368,
+        "median_gate_latency_ms": 0.336,
+        "p95_gate_latency_ms": 0.594,
+        "mean_ledger_overhead_ms": 0.366,
         "mean_replay_overhead_ms": 0.0
       },
       {
@@ -230,11 +230,11 @@
         "inconclusive_on_evolved_contract": 5,
         "final_tasks_resolved": 30,
         "final_resolution_rate_pct": 100.0,
-        "mean_gate_latency_ms": 20.266,
-        "median_gate_latency_ms": 19.925,
-        "p95_gate_latency_ms": 22.441,
-        "mean_ledger_overhead_ms": 0.371,
-        "mean_replay_overhead_ms": 19.734
+        "mean_gate_latency_ms": 19.879,
+        "median_gate_latency_ms": 19.478,
+        "p95_gate_latency_ms": 23.128,
+        "mean_ledger_overhead_ms": 0.375,
+        "mean_replay_overhead_ms": 19.349
       },
       {
         "config_id": "unversioned_ledger",
@@ -259,11 +259,11 @@
         "inconclusive_on_evolved_contract": 0,
         "final_tasks_resolved": 25,
         "final_resolution_rate_pct": 83.33,
-        "mean_gate_latency_ms": 11.791,
-        "median_gate_latency_ms": 18.743,
-        "p95_gate_latency_ms": 22.284,
-        "mean_ledger_overhead_ms": 0.341,
-        "mean_replay_overhead_ms": 11.362
+        "mean_gate_latency_ms": 11.098,
+        "median_gate_latency_ms": 17.981,
+        "p95_gate_latency_ms": 20.212,
+        "mean_ledger_overhead_ms": 0.327,
+        "mean_replay_overhead_ms": 10.687
       }
     ],
     "category_breakdown": [
@@ -2760,12 +2760,486 @@
     }
   },
   "experiment_b_live_llm": {
-    "executed": false,
-    "status": "NOT_EXECUTED_NO_CONFIG",
-    "model_name": "none",
-    "max_turns": 3,
-    "cli_example": "CEGAR_LLM_API_BASE=http://localhost:11434/v1 CEGAR_LLM_MODEL=qwen2.5-coder:7b cegar-harness live-eval --max-tasks 5 --max-turns 3",
-    "message": "Live LLM experiment not executed: CEGAR_LLM_API_BASE and CEGAR_LLM_MODEL environment variables are not configured.",
-    "results": []
+    "executed": true,
+    "status": "EXECUTED",
+    "model_name": "llama3:latest",
+    "max_turns": 2,
+    "tasks_evaluated": 6,
+    "task_ids": [
+      "T01",
+      "T06",
+      "T11",
+      "T16",
+      "T21",
+      "T26"
+    ],
+    "strategy_summaries": [
+      {
+        "strategy": "LOSSY_SUMMARY",
+        "model_name": "llama3:latest",
+        "tasks_evaluated": 6,
+        "max_turns": 2,
+        "gate_regressions_blocked": 0,
+        "unblocked_regressions": 4,
+        "unblocked_regression_rate_pct": 66.67,
+        "turn1_resolved": 1,
+        "turn1_resolution_rate_pct": 16.67,
+        "final_resolved": 1,
+        "final_resolution_rate_pct": 16.67,
+        "resolution_ci95_low_pct": 3.01,
+        "resolution_ci95_high_pct": 56.35,
+        "mean_llm_latency_ms": 9247.22,
+        "total_prompt_tokens": 5280,
+        "total_completion_tokens": 684
+      },
+      {
+        "strategy": "CEGAR_HARNESS_FULL",
+        "model_name": "llama3:latest",
+        "tasks_evaluated": 6,
+        "max_turns": 2,
+        "gate_regressions_blocked": 4,
+        "unblocked_regressions": 0,
+        "unblocked_regression_rate_pct": 0.0,
+        "turn1_resolved": 3,
+        "turn1_resolution_rate_pct": 50.0,
+        "final_resolved": 4,
+        "final_resolution_rate_pct": 66.67,
+        "resolution_ci95_low_pct": 30.0,
+        "resolution_ci95_high_pct": 90.32,
+        "mean_llm_latency_ms": 4915.46,
+        "total_prompt_tokens": 5566,
+        "total_completion_tokens": 399
+      }
+    ],
+    "results": [
+      {
+        "task_id": "T01",
+        "category": "1_boundary_conditions",
+        "target_file": "pagination.py",
+        "target_symbol": "clamp_limit",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 0,
+        "unblocked_regressions": 2,
+        "total_prompt_tokens": 971,
+        "total_completion_tokens": 70,
+        "total_llm_latency_ms": 45750.16,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 43355.06,
+            "prompt_tokens": 459,
+            "completion_tokens": 43,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert clamp_limit(0, 100) == 1",
+            "generated_code": "def clamp_limit(limit, max_limit=100):\n    if limit < 0:\n        return 0\n    if limit > max_limit:\n        return max_limit\n    return limit\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 2395.1,
+            "prompt_tokens": 512,
+            "completion_tokens": 27,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert clamp_limit(0, 100) == 1",
+            "generated_code": "def clamp_limit(limit, max_limit=100):\n    return min(max(limit, 0), max_limit)\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T06",
+        "category": "2_parsers_state_machines",
+        "target_file": "csv_parser.py",
+        "target_symbol": "split_csv_row",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 0,
+        "unblocked_regressions": 2,
+        "total_prompt_tokens": 950,
+        "total_completion_tokens": 92,
+        "total_llm_latency_ms": 8272.56,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 4377.43,
+            "prompt_tokens": 448,
+            "completion_tokens": 46,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert split_csv_row('\"Paris, FR\",42,ok') == ['Paris, FR', '42', 'ok']",
+            "generated_code": "import csv\n\ndef split_csv_row(line):\n    reader = csv.reader([line], quotechar='\"', escapechar='\\\\')\n    return [row[0].strip('\"') for row in reader]\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 3895.13,
+            "prompt_tokens": 502,
+            "completion_tokens": 46,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert split_csv_row('\"Paris, FR\",42,ok') == ['Paris, FR', '42', 'ok']",
+            "generated_code": "import csv\n\ndef split_csv_row(line):\n    reader = csv.reader([line], quotechar='\"', escapechar='\\\\')\n    return [row[0].strip('\"') for row in reader]\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T11",
+        "category": "3_exception_handling",
+        "target_file": "converters.py",
+        "target_symbol": "safe_int",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": true,
+        "resolved": true,
+        "turns_executed": 1,
+        "gate_blocks": 0,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 451,
+        "total_completion_tokens": 40,
+        "total_llm_latency_ms": 3935.89,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 3935.89,
+            "prompt_tokens": 451,
+            "completion_tokens": 40,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": true,
+            "failure_predicate": "PASS",
+            "generated_code": "def safe_int(val, default=0):\n    if val is None:\n        return default\n    try:\n        return int(val)\n    except ValueError:\n        return default\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T16",
+        "category": "4_multi_file_changes",
+        "target_file": "session_guard.py",
+        "target_symbol": "is_token_valid",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 0,
+        "unblocked_regressions": 2,
+        "total_prompt_tokens": 968,
+        "total_completion_tokens": 62,
+        "total_llm_latency_ms": 5889.3,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 3277.95,
+            "prompt_tokens": 457,
+            "completion_tokens": 34,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:8: assert is_token_valid(tok, now_s=1060) is False",
+            "generated_code": "def is_token_valid(token, now_s):\n    return bool(token.get('uid')) and now_s < token.get('exp', 0)\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 2611.35,
+            "prompt_tokens": 511,
+            "completion_tokens": 28,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "EXCEPTION_RAISED: test_reference_suite: TypeError: is_token_valid() got an unexpected keyword argument 'now_s'",
+            "generated_code": "def is_token_valid(token, now):\n    return bool(token.get('uid')) and now < token['exp']\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T21",
+        "category": "5_feature_regressions",
+        "target_file": "slug.py",
+        "target_symbol": "slugify",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 0,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 955,
+        "total_completion_tokens": 360,
+        "total_llm_latency_ms": 32164.13,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 28533.64,
+            "prompt_tokens": 451,
+            "completion_tokens": 320,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "SyntaxError: unterminated string literal (detected at line 2)",
+            "generated_code": "def slugify(text, max_len=20):\n    return text.strip().replace(' ', '-').replace('_', '-').replace('--', '-').replace('---', '-').replace('----', '-').replace('-----', '-').replace('------', '-').replace('-------', '-').replace('--------', '-').replace('---------', '-').replace('----------', '-').replace('-----------', '-').replace('------------', '-').replace('-------------', '-').replace('--------------', '-').replace('---------------', '-').replace('----------------', '-').replace('-----------------', '-').replace('------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('-------------------', '-').replace('\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 3630.49,
+            "prompt_tokens": 504,
+            "completion_tokens": 40,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert slugify('Hello World!') == 'hello-world'",
+            "generated_code": "def slugify(text, max_len=20):\n    return text.strip().replace(' ', '-').replace('_', '-').replace('--', '-').lower()[:max_len]\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T26",
+        "category": "6_syntactic_variants",
+        "target_file": "scores.py",
+        "target_symbol": "keep_valid_scores",
+        "strategy": "LOSSY_SUMMARY",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 0,
+        "unblocked_regressions": 2,
+        "total_prompt_tokens": 985,
+        "total_completion_tokens": 60,
+        "total_llm_latency_ms": 5707.43,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 3073.82,
+            "prompt_tokens": 466,
+            "completion_tokens": 30,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert keep_valid_scores([0, 50, None, 100, -1, 105]) == [0, 50, 100]",
+            "generated_code": "def keep_valid_scores(scores):\n    return [s for s in scores if s and 0 <= s <= 100]\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 2633.61,
+            "prompt_tokens": 519,
+            "completion_tokens": 30,
+            "gate_status": "BYPASSED",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "ASSERTION_FAILED: test_reference_suite: test_reference_suite:5: assert keep_valid_scores([0, 50, None, 100, -1, 105]) == [0, 50, 100]",
+            "generated_code": "def keep_valid_scores(scores):\n    return [s for s in scores if s and 0 <= s <= 100]\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T01",
+        "category": "1_boundary_conditions",
+        "target_file": "pagination.py",
+        "target_symbol": "clamp_limit",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": true,
+        "resolved": true,
+        "turns_executed": 1,
+        "gate_blocks": 0,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 557,
+        "total_completion_tokens": 35,
+        "total_llm_latency_ms": 4968.54,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 4968.54,
+            "prompt_tokens": 557,
+            "completion_tokens": 35,
+            "gate_status": "PASS",
+            "oracle_executed": true,
+            "oracle_passed": true,
+            "failure_predicate": "PASS",
+            "generated_code": "def clamp_limit(limit: int, max_limit: int = 100) -> int:\n    return min(max(limit, 1), max_limit)\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T06",
+        "category": "2_parsers_state_machines",
+        "target_file": "csv_parser.py",
+        "target_symbol": "split_csv_row",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": false,
+        "resolved": true,
+        "turns_executed": 2,
+        "gate_blocks": 1,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 1304,
+        "total_completion_tokens": 142,
+        "total_llm_latency_ms": 14487.5,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 5434.88,
+            "prompt_tokens": 563,
+            "completion_tokens": 46,
+            "gate_status": "REGRESSION_DETECTED",
+            "triggered_by": "witness_replay",
+            "matched_ce_id": "CE-T06-LIVE-01",
+            "oracle_executed": false,
+            "oracle_passed": false,
+            "generated_code": "import re\n\ndef split_csv_row(line: str) -> list[str]:\n    return re.split(r'\"(?:[^\"]|\")*|,(?=(?:[^\"]|\")*$)', line.strip('\"'))\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 9052.62,
+            "prompt_tokens": 741,
+            "completion_tokens": 96,
+            "gate_status": "PASS",
+            "oracle_executed": true,
+            "oracle_passed": true,
+            "failure_predicate": "PASS",
+            "generated_code": "def split_csv_row(line: str) -> list[str]:\n    parts = []\n    current_part = ''\n    in_quotes = False\n    for char in line:\n        if char == '\"':\n            in_quotes = not in_quotes\n        elif char == ',' and not in_quotes:\n            parts.append(current_part.strip('\"'))\n            current_part = ''\n        else:\n            current_part += char\n    parts.append(current_part.strip('\"'))\n    return parts\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T11",
+        "category": "3_exception_handling",
+        "target_file": "converters.py",
+        "target_symbol": "safe_int",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": true,
+        "resolved": true,
+        "turns_executed": 1,
+        "gate_blocks": 0,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 561,
+        "total_completion_tokens": 40,
+        "total_llm_latency_ms": 6598.3,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 6598.3,
+            "prompt_tokens": 561,
+            "completion_tokens": 40,
+            "gate_status": "PASS",
+            "oracle_executed": true,
+            "oracle_passed": true,
+            "failure_predicate": "PASS",
+            "generated_code": "def safe_int(val, default=0):\n    if val is None:\n        return default\n    try:\n        return int(val)\n    except ValueError:\n        return default\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T16",
+        "category": "4_multi_file_changes",
+        "target_file": "session_guard.py",
+        "target_symbol": "is_token_valid",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 2,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 1351,
+        "total_completion_tokens": 61,
+        "total_llm_latency_ms": 6508.89,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 3397.63,
+            "prompt_tokens": 588,
+            "completion_tokens": 30,
+            "gate_status": "REGRESSION_DETECTED",
+            "triggered_by": "ast_filter",
+            "matched_ce_id": "CE-T16-LIVE-01",
+            "oracle_executed": false,
+            "oracle_passed": false,
+            "generated_code": "def is_token_valid(token, now_ts):\n    return bool(token.get('uid')) and now_ts < token['exp']\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 3111.26,
+            "prompt_tokens": 763,
+            "completion_tokens": 31,
+            "gate_status": "REGRESSION_DETECTED",
+            "triggered_by": "witness_replay",
+            "matched_ce_id": "CE-T16-LIVE-01",
+            "oracle_executed": false,
+            "oracle_passed": false,
+            "generated_code": "def is_token_valid(token, now_ts):\n    return bool(token.get('uid')) and token['exp'] > now_ts\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T21",
+        "category": "5_feature_regressions",
+        "target_file": "slug.py",
+        "target_symbol": "slugify",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": false,
+        "resolved": false,
+        "turns_executed": 2,
+        "gate_blocks": 1,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 1223,
+        "total_completion_tokens": 78,
+        "total_llm_latency_ms": 7298.85,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 3913.78,
+            "prompt_tokens": 535,
+            "completion_tokens": 40,
+            "gate_status": "INCONCLUSIVE",
+            "oracle_executed": true,
+            "oracle_passed": false,
+            "failure_predicate": "SyntaxError: invalid syntax",
+            "generated_code": "def slugify(text, max_len=20):\n    return text.strip().replace(' ', '-').lower().replace('-', '').[:max_len].ljust(max_len, '-')\n"
+          },
+          {
+            "turn": 2,
+            "llm_latency_ms": 3385.07,
+            "prompt_tokens": 688,
+            "completion_tokens": 38,
+            "gate_status": "REGRESSION_DETECTED",
+            "triggered_by": "witness_replay",
+            "matched_ce_id": "CE-T21-LIVE-02",
+            "oracle_executed": false,
+            "oracle_passed": false,
+            "generated_code": "def slugify(text, max_len=20):\n    text = text.strip().replace(' ', '-').lower()\n    return text[:max_len].rstrip('-')\n"
+          }
+        ]
+      },
+      {
+        "task_id": "T26",
+        "category": "6_syntactic_variants",
+        "target_file": "scores.py",
+        "target_symbol": "keep_valid_scores",
+        "strategy": "CEGAR_HARNESS_FULL",
+        "turn1_resolved": true,
+        "resolved": true,
+        "turns_executed": 1,
+        "gate_blocks": 0,
+        "unblocked_regressions": 0,
+        "total_prompt_tokens": 570,
+        "total_completion_tokens": 43,
+        "total_llm_latency_ms": 4377.07,
+        "turn_traces": [
+          {
+            "turn": 1,
+            "llm_latency_ms": 4377.07,
+            "prompt_tokens": 570,
+            "completion_tokens": 43,
+            "gate_status": "PASS",
+            "oracle_executed": true,
+            "oracle_passed": true,
+            "failure_predicate": "PASS",
+            "generated_code": "def keep_valid_scores(scores: list[int | None]) -> list[int]:\n    return [s for s in scores if isinstance(s, int) and 0 <= s <= 100]\n"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -27,7 +27,7 @@
   <rect x="225.0" y="315.5" width="34" height="2.5" rx="3" fill="#dc2626"/>
   <text x="242.0" y="309.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">0.0%</text>
   <text x="184.0" y="338" text-anchor="middle" font-size="10" font-weight="700" font-family="monospace" fill="#0f172a">full_cegar_harness</text>
-  <text x="184.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 18.71 / 21.21 ms</text>
+  <text x="184.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 18.27 / 20.49 ms</text>
   <rect x="318.0" y="68.0" width="34" height="250.0" rx="3" fill="#2563eb"/>
   <text x="335.0" y="62.0" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">100.0%</text>
   <rect x="357.0" y="109.7" width="34" height="208.3" rx="3" fill="#0d9488"/>
@@ -37,7 +37,7 @@
   <rect x="435.0" y="315.5" width="34" height="2.5" rx="3" fill="#dc2626"/>
   <text x="452.0" y="309.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">0.0%</text>
   <text x="394.0" y="338" text-anchor="middle" font-size="10" font-weight="700" font-family="monospace" fill="#0f172a">ast_filter_only</text>
-  <text x="394.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 0.30 / 0.52 ms</text>
+  <text x="394.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 0.34 / 0.59 ms</text>
   <rect x="528.0" y="68.0" width="34" height="250.0" rx="3" fill="#2563eb"/>
   <text x="545.0" y="62.0" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">100.0%</text>
   <rect x="567.0" y="68.0" width="34" height="250.0" rx="3" fill="#0d9488"/>
@@ -47,7 +47,7 @@
   <rect x="645.0" y="315.5" width="34" height="2.5" rx="3" fill="#dc2626"/>
   <text x="662.0" y="309.5" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">0.0%</text>
   <text x="604.0" y="338" text-anchor="middle" font-size="10" font-weight="700" font-family="monospace" fill="#0f172a">witness_replay_only</text>
-  <text x="604.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 19.93 / 22.44 ms</text>
+  <text x="604.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 19.48 / 23.13 ms</text>
   <rect x="738.0" y="103.7" width="34" height="214.3" rx="3" fill="#2563eb"/>
   <text x="755.0" y="97.7" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">85.7%</text>
   <rect x="777.0" y="68.0" width="34" height="250.0" rx="3" fill="#0d9488"/>
@@ -57,7 +57,7 @@
   <rect x="855.0" y="276.3" width="34" height="41.7" rx="3" fill="#dc2626"/>
   <text x="872.0" y="270.3" text-anchor="middle" font-size="9" font-weight="700" fill="#1e293b">16.7%</text>
   <text x="814.0" y="338" text-anchor="middle" font-size="10" font-weight="700" font-family="monospace" fill="#0f172a">unversioned_ledger</text>
-  <text x="814.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 18.74 / 22.28 ms</text>
+  <text x="814.0" y="353" text-anchor="middle" font-size="8.8" fill="#64748b">Med/p95: 17.98 / 20.21 ms</text>
   <rect x="95" y="372" width="13" height="13" rx="2" fill="#2563eb"/>
   <text x="113" y="382" font-size="10" font-weight="600" fill="#334155">Gate Precision %</text>
   <rect x="300" y="372" width="13" height="13" rx="2" fill="#0d9488"/>

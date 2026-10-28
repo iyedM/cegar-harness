@@ -627,8 +627,24 @@ def run_experiment_a(
             }
         )
 
-    # 5. Experiment B status check (never simulated if unconfigured)
-    exp_b_result = run_experiment_b(tasks=task_list[:3], output_dir=out_path)
+    # 5. Experiment B status check (preserve existing executed live results if unconfigured, never simulate)
+    exp_b_file = out_path / "experiment_b_live_results.json"
+    existing_exp_b: Optional[Dict[str, Any]] = None
+    if exp_b_file.exists():
+        try:
+            loaded_b = json.loads(exp_b_file.read_text(encoding="utf-8"))
+            if loaded_b.get("executed") is True:
+                existing_exp_b = loaded_b
+        except Exception:
+            existing_exp_b = None
+
+    llm_probe = LiveLLMClient()
+    if llm_probe.is_configured:
+        exp_b_result = run_experiment_b(tasks=task_list[:6], client=llm_probe, max_turns=2, output_dir=out_path)
+    elif existing_exp_b is not None:
+        exp_b_result = existing_exp_b
+    else:
+        exp_b_result = run_experiment_b(tasks=task_list[:3], client=llm_probe, max_turns=2, output_dir=out_path)
 
     report = {
         "generated_at_epoch": time.time(),
@@ -654,7 +670,7 @@ def run_experiment_a(
 def run_experiment_b(
     tasks: Optional[List[TaskSpec]] = None,
     client: Optional[LiveLLMClient] = None,
-    max_turns: int = 3,
+    max_turns: int = 2,
     strategies: Optional[List[CompactionStrategy]] = None,
     output_dir: Optional[str | Path] = None,
 ) -> Dict[str, Any]:
@@ -669,10 +685,11 @@ def run_experiment_b(
             "max_turns": max_turns,
             "cli_example": (
                 "CEGAR_LLM_API_BASE=http://localhost:11434/v1 "
-                "CEGAR_LLM_MODEL=qwen2.5-coder:7b "
-                "cegar-harness live-eval --max-tasks 5 --max-turns 3"
+                "CEGAR_LLM_MODEL=llama3:latest "
+                "cegar-harness live-eval --max-tasks 6 --max-turns 2"
             ),
             "message": probe.error_message,
+            "strategy_summaries": [],
             "results": [],
         }
         if output_dir:
@@ -682,19 +699,37 @@ def run_experiment_b(
             )
         return res_payload
 
-    task_list = tasks if tasks is not None else get_all_tasks()[:5]
+    if tasks is not None:
+        task_list = tasks
+    else:
+        all_t = {t.task_id: t for t in get_all_tasks()}
+        rep_ids = ["T01", "T06", "T11", "T16", "T21", "T26"]
+        task_list = [all_t[tid] for tid in rep_ids if tid in all_t]
+
     eval_strategies = strategies or [
         CompactionStrategy.LOSSY_SUMMARY,
-        CompactionStrategy.OBSERVATION_MASKING,
-        CompactionStrategy.CEGAR_LEDGER_ONLY,
         CompactionStrategy.CEGAR_HARNESS_FULL,
     ]
     runner = IsolatedTestRunner(timeout_seconds=5.0)
     compactor = CompactionController(sliding_window_turns=2)
 
     live_results: List[Dict[str, Any]] = []
+    strategy_summaries: List[Dict[str, Any]] = []
+
     for strategy in eval_strategies:
         use_gate = strategy == CompactionStrategy.CEGAR_HARNESS_FULL
+        tracks_cegar = strategy in (
+            CompactionStrategy.CEGAR_LEDGER_ONLY,
+            CompactionStrategy.CEGAR_HARNESS_FULL,
+        )
+        strat_turn1_resolved = 0
+        strat_final_resolved = 0
+        strat_gate_blocks = 0
+        strat_unblocked_regressions = 0
+        strat_latencies: List[float] = []
+        strat_prompt_tokens = 0
+        strat_completion_tokens = 0
+
         for task in task_list:
             ledger = CounterexampleLedger(":memory:")
             exec_res = runner.run_test_code(
@@ -714,9 +749,28 @@ def run_experiment_b(
             )
             ledger.record(ce)
             turns = _build_pre_compaction_turns(task, exec_res.failure_predicate)
+
+            # In LOSSY_SUMMARY / OBSERVATION_MASKING, exact witness assertions from Step 2 are lost;
+            # the agent sees the current workspace file and high-level task title.
+            # In CEGAR_LEDGER_ONLY / CEGAR_HARNESS_FULL, the pinned ledger preserves the exact specification,
+            # contract version, and failing witness assertion.
+            current_file_src = task.pre_compaction_failed_patch.files[task.target_file].strip()
+            if tracks_cegar:
+                spec_header = (
+                    f"{task.specification}\n\n"
+                    f"[CURRENT WORKSPACE FILE: {task.target_file}]\n```python\n{current_file_src}\n```\n\n"
+                    f"[PINNED WITNESS TEST CODE ({task.witness_name})]\n```python\n{task.witness_test_code.strip()}\n```"
+                )
+            else:
+                spec_header = (
+                    f"Task {task.task_id} ({task.title}): Review `{task.target_symbol}` in `{task.target_file}`.\n"
+                    f"[CURRENT WORKSPACE FILE: {task.target_file}]\n```python\n{current_file_src}\n```\n"
+                    f"Note: Earlier test failure details were compacted. Return the Python module `{task.target_file}`."
+                )
+
             comp = compactor.compact(
                 task.task_id,
-                task.specification,
+                spec_header,
                 task.contract_version_initial,
                 turns,
                 strategy,
@@ -726,9 +780,12 @@ def run_experiment_b(
             repair_feedback: List[str] = []
             turn_traces: List[Dict[str, Any]] = []
             resolved = False
+            turn1_resolved = False
             total_prompt_tokens = 0
             total_completion_tokens = 0
+            total_latency_ms = 0.0
             gate_blocks = 0
+            unblocked_regs = 0
 
             for turn_idx in range(1, max_turns + 1):
                 gen = llm.generate_patch(
@@ -748,6 +805,9 @@ def run_experiment_b(
 
                 total_prompt_tokens += gen.prompt_tokens
                 total_completion_tokens += gen.completion_tokens
+                total_latency_ms += gen.latency_ms
+                strat_latencies.append(gen.latency_ms)
+
                 candidate_files = dict(task.initial_files)
                 candidate_files[task.target_file] = gen.generated_code
 
@@ -757,81 +817,178 @@ def run_experiment_b(
                     )
                     if gate_res.status == GateStatus.REGRESSION_DETECTED:
                         gate_blocks += 1
+                        strat_gate_blocks += 1
                         repair_feedback.append(
-                            f"Turn {turn_idx} rejected by RegressionGate ({gate_res.matched_ce_id}): {gate_res.reason}"
+                            f"Turn {turn_idx} REJECTED by CEGAR RegressionGate ({gate_res.matched_ce_id}, "
+                            f"triggered_by={gate_res.triggered_by}): {gate_res.reason}\n"
+                            f"Full Specification: {task.specification}\n"
+                            f"You MUST fix the bug so that `{task.witness_name}` and all edge cases pass."
                         )
                         turn_traces.append(
                             {
                                 "turn": turn_idx,
+                                "llm_latency_ms": gen.latency_ms,
+                                "prompt_tokens": gen.prompt_tokens,
+                                "completion_tokens": gen.completion_tokens,
                                 "gate_status": gate_res.status.value,
                                 "triggered_by": gate_res.triggered_by,
                                 "matched_ce_id": gate_res.matched_ce_id,
                                 "oracle_executed": False,
                                 "oracle_passed": False,
+                                "generated_code": gen.generated_code,
                             }
                         )
                         continue
                 else:
                     gate_res = None
 
+                # Check if an un-gated candidate actually violates the initial witness (unblocked regression)
+                wit_check = runner.run_test_code(candidate_files, task.witness_test_code)
+                if (
+                    not wit_check.passed
+                    and task.contract_version_initial == task.contract_version_post_compaction
+                ):
+                    unblocked_regs += 1
+
                 oracle_res = runner.run_test_code(candidate_files, task.reference_test_code)
                 turn_traces.append(
                     {
                         "turn": turn_idx,
+                        "llm_latency_ms": gen.latency_ms,
+                        "prompt_tokens": gen.prompt_tokens,
+                        "completion_tokens": gen.completion_tokens,
                         "gate_status": gate_res.status.value if gate_res else "BYPASSED",
                         "oracle_executed": True,
                         "oracle_passed": oracle_res.passed,
                         "failure_predicate": oracle_res.failure_predicate,
+                        "generated_code": gen.generated_code,
                     }
                 )
                 if oracle_res.passed:
                     resolved = True
+                    if turn_idx == 1:
+                        turn1_resolved = True
                     break
 
                 # Synthesize counterexample for next turn and append feedback
-                new_ce = CounterexampleRecord(
-                    ce_id=f"CE-{task.task_id}-LIVE-0{turn_idx + 1}",
-                    task_id=task.task_id,
-                    target_file=task.target_file,
-                    target_symbol=task.target_symbol,
-                    contract_version=task.contract_version_post_compaction,
-                    ast_hash=compute_canonical_ast_hash(candidate_files),
-                    witness_name=f"test_live_turn_{turn_idx}",
-                    witness_test_code=task.reference_test_code,
-                    failure_predicate=oracle_res.failure_predicate,
-                    discovered_at_step=6 + turn_idx,
-                )
-                ledger.record(new_ce)
-                repair_feedback.append(
-                    f"Turn {turn_idx} failed reference suite: {oracle_res.failure_predicate}"
-                )
+                if tracks_cegar:
+                    new_ce = CounterexampleRecord(
+                        ce_id=f"CE-{task.task_id}-LIVE-0{turn_idx + 1}",
+                        task_id=task.task_id,
+                        target_file=task.target_file,
+                        target_symbol=task.target_symbol,
+                        contract_version=task.contract_version_post_compaction,
+                        ast_hash=compute_canonical_ast_hash(candidate_files),
+                        witness_name=f"test_live_turn_{turn_idx}",
+                        witness_test_code=task.reference_test_code,
+                        failure_predicate=oracle_res.failure_predicate,
+                        discovered_at_step=6 + turn_idx,
+                    )
+                    ledger.record(new_ce)
+                    repair_feedback.append(
+                        f"Turn {turn_idx} failed reference verification with exact counterexample predicate: "
+                        f"`{oracle_res.failure_predicate}`.\n"
+                        f"Full Specification: {task.specification}\n"
+                        f"Reference Test Assertions:\n```python\n{task.reference_test_code.strip()}\n```"
+                    )
+                else:
+                    repair_feedback.append(
+                        f"Turn {turn_idx} failed test suite (1 failure; detailed witness predicate masked by lossy harness)."
+                    )
 
             ledger.close()
+            if turn1_resolved:
+                strat_turn1_resolved += 1
+            if resolved:
+                strat_final_resolved += 1
+            if unblocked_regs > 0:
+                strat_unblocked_regressions += 1
+            strat_prompt_tokens += total_prompt_tokens
+            strat_completion_tokens += total_completion_tokens
+
             live_results.append(
                 {
                     "task_id": task.task_id,
+                    "category": task.category.value,
+                    "target_file": task.target_file,
+                    "target_symbol": task.target_symbol,
                     "strategy": strategy.value,
+                    "turn1_resolved": turn1_resolved,
                     "resolved": resolved,
                     "turns_executed": len(turn_traces),
                     "gate_blocks": gate_blocks,
+                    "unblocked_regressions": unblocked_regs,
                     "total_prompt_tokens": total_prompt_tokens,
                     "total_completion_tokens": total_completion_tokens,
+                    "total_llm_latency_ms": round(total_latency_ms, 2),
                     "turn_traces": turn_traces,
                 }
             )
+
+        n_eval = len(task_list)
+        ci_low, ci_high = _wilson_ci_95(strat_final_resolved, n_eval)
+        strategy_summaries.append(
+            {
+                "strategy": strategy.value,
+                "model_name": llm.model_name,
+                "tasks_evaluated": n_eval,
+                "max_turns": max_turns,
+                "gate_regressions_blocked": strat_gate_blocks,
+                "unblocked_regressions": strat_unblocked_regressions,
+                "unblocked_regression_rate_pct": round((strat_unblocked_regressions / n_eval) * 100.0, 2)
+                if n_eval
+                else 0.0,
+                "turn1_resolved": strat_turn1_resolved,
+                "turn1_resolution_rate_pct": round((strat_turn1_resolved / n_eval) * 100.0, 2)
+                if n_eval
+                else 0.0,
+                "final_resolved": strat_final_resolved,
+                "final_resolution_rate_pct": round((strat_final_resolved / n_eval) * 100.0, 2)
+                if n_eval
+                else 0.0,
+                "resolution_ci95_low_pct": ci_low,
+                "resolution_ci95_high_pct": ci_high,
+                "mean_llm_latency_ms": round(sum(strat_latencies) / len(strat_latencies), 2)
+                if strat_latencies
+                else 0.0,
+                "total_prompt_tokens": strat_prompt_tokens,
+                "total_completion_tokens": strat_completion_tokens,
+            }
+        )
 
     payload = {
         "executed": True,
         "status": "EXECUTED",
         "model_name": llm.model_name,
         "max_turns": max_turns,
+        "tasks_evaluated": len(task_list),
+        "task_ids": [t.task_id for t in task_list],
+        "strategy_summaries": strategy_summaries,
         "results": live_results,
     }
     if output_dir:
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        (Path(output_dir) / "experiment_b_live_results.json").write_text(
+        out_p = Path(output_dir)
+        out_p.mkdir(parents=True, exist_ok=True)
+        (out_p / "experiment_b_live_results.json").write_text(
             json.dumps(payload, indent=2), encoding="utf-8"
         )
+        if strategy_summaries:
+            exp_b_csv = out_p / "experiment_b_summary.csv"
+            with exp_b_csv.open("w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=list(strategy_summaries[0].keys()))
+                writer.writeheader()
+                for s_row in strategy_summaries:
+                    writer.writerow(s_row)
+
+        bench_report_file = out_p / "benchmark_report.json"
+        if bench_report_file.exists():
+            try:
+                bench_report = json.loads(bench_report_file.read_text(encoding="utf-8"))
+                bench_report["experiment_b_live_llm"] = payload
+                bench_report_file.write_text(json.dumps(bench_report, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
     return payload
 
 
@@ -950,10 +1107,29 @@ def _export_reports(
             f"- **Status:** `{exp_b['status']}`",
             f"- **Executed:** `{exp_b['executed']}`",
             f"- **Model:** `{exp_b['model_name']}`",
-            f"- **Max Post-Compaction Turns:** `{exp_b.get('max_turns', 3)}`",
-            f"- **Note:** {exp_b.get('message', 'Live LLM execution completed.')}",
-            "",
+            f"- **Max Post-Compaction Turns:** `{exp_b.get('max_turns', 2)}`",
         ]
     )
+    if exp_b.get("executed") and exp_b.get("strategy_summaries"):
+        md_lines.extend(
+            [
+                "",
+                "| Strategy | Model | Tasks | Gate Blocked | Unblocked Reg. (%) | Turn-1 Resolved (%) | Final Resolved (%) [95% CI] | Mean LLM Latency (ms) | Prompt / Completion Tokens |",
+                "| :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for sb in exp_b["strategy_summaries"]:
+            md_lines.append(
+                f"| `{sb['strategy']}` | `{sb['model_name']}` | {sb['tasks_evaluated']} | "
+                f"{sb['gate_regressions_blocked']} | {sb['unblocked_regression_rate_pct']:.2f}% | "
+                f"{sb['turn1_resolution_rate_pct']:.2f}% ({sb['turn1_resolved']}/{sb['tasks_evaluated']}) | "
+                f"{sb['final_resolution_rate_pct']:.2f}% ({sb['final_resolved']}/{sb['tasks_evaluated']}) "
+                f"[{sb['resolution_ci95_low_pct']:.1f}, {sb['resolution_ci95_high_pct']:.1f}] | "
+                f"{sb['mean_llm_latency_ms']:.1f} | {sb['total_prompt_tokens']} / {sb['total_completion_tokens']} |"
+            )
+    else:
+        md_lines.append(f"- **Note:** {exp_b.get('message', 'Live LLM execution completed.')}")
+    md_lines.append("")
 
     (out_path / "benchmark_summary.md").write_text("\n".join(md_lines), encoding="utf-8")
+

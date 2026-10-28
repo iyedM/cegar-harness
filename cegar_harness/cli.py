@@ -56,7 +56,17 @@ def _cmd_bench(args: argparse.Namespace) -> int:
 def _cmd_live_eval(args: argparse.Namespace) -> int:
     from cegar_harness.llm_provider import LiveLLMClient
 
-    tasks = get_all_tasks()[: args.max_tasks]
+    all_tasks = get_all_tasks()
+    by_id = {t.task_id: t for t in all_tasks}
+    if getattr(args, "task_ids", None):
+        req_ids = [tid.strip() for tid in args.task_ids.split(",") if tid.strip()]
+        tasks = [by_id[tid] for tid in req_ids if tid in by_id]
+    elif args.max_tasks == 6:
+        rep_ids = ["T01", "T06", "T11", "T16", "T21", "T26"]
+        tasks = [by_id[tid] for tid in rep_ids if tid in by_id]
+    else:
+        tasks = all_tasks[: args.max_tasks]
+
     client = LiveLLMClient(
         api_base=args.api_base,
         api_key=args.api_key,
@@ -117,6 +127,14 @@ def _cmd_ui(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_repo_eval(args: argparse.Namespace) -> int:
+    from cegar_harness.real_repo_bench import run_multi_file_repo_benchmark
+
+    summary = run_multi_file_repo_benchmark(output_dir=args.output_dir)
+    print(json.dumps(summary, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cegar-harness",
@@ -136,13 +154,21 @@ def build_parser() -> argparse.ArgumentParser:
         "live-eval",
         help="Run Experiment B (Multi-Turn Live LLM Repair Loop; requires CEGAR_LLM_API_BASE & CEGAR_LLM_MODEL or CLI flags)",
     )
-    p_live.add_argument("--max-tasks", type=int, default=5, help="Max tasks to evaluate live")
-    p_live.add_argument("--max-turns", type=int, default=3, help="Max post-compaction turns per task")
+    p_live.add_argument("--max-tasks", type=int, default=6, help="Max tasks to evaluate live (default: 6 across 6 categories)")
+    p_live.add_argument("--task-ids", default=None, help="Comma-separated task IDs (e.g. T01,T06,T11,T16,T21,T26)")
+    p_live.add_argument("--max-turns", type=int, default=2, help="Max post-compaction turns per task (default: 2)")
     p_live.add_argument("--model", default=None, help="LLM model name override (or CEGAR_LLM_MODEL)")
     p_live.add_argument("--api-base", default=None, help="OpenAI-compatible API base URL override")
     p_live.add_argument("--api-key", default=None, help="API key override")
     p_live.add_argument("--output-dir", default="results", help="Output directory for experiment_b_live_results.json")
     p_live.set_defaults(func=_cmd_live_eval)
+
+    p_repo = sub.add_parser(
+        "repo-eval",
+        help="Run Multi-File Git Repository Evaluation with atomic rollback verification",
+    )
+    p_repo.add_argument("--output-dir", default="results", help="Output directory for real_repo_eval.json")
+    p_repo.set_defaults(func=_cmd_repo_eval)
 
     p_insp = sub.add_parser("inspect-ledger", help="Inspect stored counterexamples in SQLite ledger")
     p_insp.add_argument(
