@@ -22,11 +22,11 @@
     "inconclusive_on_evolved_contract": 5,
     "final_tasks_resolved": 30,
     "final_resolution_rate_pct": 100.0,
-    "mean_gate_latency_ms": 12.044,
-    "median_gate_latency_ms": 19.067,
-    "p95_gate_latency_ms": 21.822,
-    "mean_ledger_overhead_ms": 0.362,
-    "mean_replay_overhead_ms": 11.594
+    "mean_gate_latency_ms": 11.999,
+    "median_gate_latency_ms": 18.885,
+    "p95_gate_latency_ms": 21.723,
+    "mean_ledger_overhead_ms": 0.366,
+    "mean_replay_overhead_ms": 11.532
   },
   {
     "config_id": "ast_filter_only",
@@ -51,10 +51,10 @@
     "inconclusive_on_evolved_contract": 0,
     "final_tasks_resolved": 25,
     "final_resolution_rate_pct": 83.33,
-    "mean_gate_latency_ms": 0.337,
-    "median_gate_latency_ms": 0.3,
-    "p95_gate_latency_ms": 0.646,
-    "mean_ledger_overhead_ms": 0.336,
+    "mean_gate_latency_ms": 0.336,
+    "median_gate_latency_ms": 0.302,
+    "p95_gate_latency_ms": 0.621,
+    "mean_ledger_overhead_ms": 0.335,
     "mean_replay_overhead_ms": 0.0
   },
   {
@@ -80,11 +80,11 @@
     "inconclusive_on_evolved_contract": 5,
     "final_tasks_resolved": 30,
     "final_resolution_rate_pct": 100.0,
-    "mean_gate_latency_ms": 20.174,
-    "median_gate_latency_ms": 19.935,
-    "p95_gate_latency_ms": 22.867,
-    "mean_ledger_overhead_ms": 0.408,
-    "mean_replay_overhead_ms": 19.607
+    "mean_gate_latency_ms": 19.175,
+    "median_gate_latency_ms": 18.593,
+    "p95_gate_latency_ms": 22.005,
+    "mean_ledger_overhead_ms": 0.351,
+    "mean_replay_overhead_ms": 18.677
   },
   {
     "config_id": "unversioned_ledger",
@@ -109,10 +109,10 @@
     "inconclusive_on_evolved_contract": 0,
     "final_tasks_resolved": 25,
     "final_resolution_rate_pct": 83.33,
-    "mean_gate_latency_ms": 11.89,
-    "median_gate_latency_ms": 18.752,
-    "p95_gate_latency_ms": 21.42,
-    "mean_ledger_overhead_ms": 0.36,
-    "mean_replay_overhead_ms": 11.431
+    "mean_gate_latency_ms": 10.979,
+    "median_gate_latency_ms": 17.644,
+    "p95_gate_latency_ms": 20.695,
+    "mean_ledger_overhead_ms": 0.294,
+    "mean_replay_overhead_ms": 10.598
   }
 ]

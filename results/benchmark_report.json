@@ -1,9 +1,11 @@
 {
-  "generated_at_epoch": 1793181567.5409832,
-  "benchmark_version": "0.1.0",
+  "generated_at_epoch": 1793183116.8295014,
+  "benchmark_version": "0.2.0",
+  "max_oracle_turns": 2,
   "experiment_a_controlled_replay": {
     "total_tasks": 30,
     "categories_count": 6,
+    "max_oracle_turns": 2,
     "strategies": [
       {
         "strategy": "FULL_HISTORY",
@@ -16,11 +18,19 @@
         "regressions_blocked_by_gate": 0,
         "unblocked_regressions": 5,
         "unblocked_regression_rate_pct": 16.67,
+        "regression_ci95_low_pct": 7.34,
+        "regression_ci95_high_pct": 33.56,
+        "secondary_witnesses_synthesized": 0,
         "false_blocks": 0,
         "false_block_rate_pct": 0.0,
         "inconclusive_gates": 0,
-        "tasks_resolved": 25,
-        "resolution_rate_pct": 83.33,
+        "turn1_resolved": 19,
+        "turn1_resolution_rate_pct": 63.33,
+        "tasks_resolved": 26,
+        "resolution_rate_pct": 86.67,
+        "resolution_ci95_low_pct": 70.32,
+        "resolution_ci95_high_pct": 94.69,
+        "mean_oracle_turns_to_convergence": 1.37,
         "mean_gate_latency_ms": 0.0,
         "median_gate_latency_ms": 0.0,
         "p95_gate_latency_ms": 0.0
@@ -36,11 +46,19 @@
         "regressions_blocked_by_gate": 0,
         "unblocked_regressions": 30,
         "unblocked_regression_rate_pct": 100.0,
+        "regression_ci95_low_pct": 88.65,
+        "regression_ci95_high_pct": 100.0,
+        "secondary_witnesses_synthesized": 0,
         "false_blocks": 0,
         "false_block_rate_pct": 0.0,
         "inconclusive_gates": 0,
-        "tasks_resolved": 0,
-        "resolution_rate_pct": 0.0,
+        "turn1_resolved": 0,
+        "turn1_resolution_rate_pct": 0.0,
+        "tasks_resolved": 21,
+        "resolution_rate_pct": 70.0,
+        "resolution_ci95_low_pct": 52.12,
+        "resolution_ci95_high_pct": 83.34,
+        "mean_oracle_turns_to_convergence": 2.0,
         "mean_gate_latency_ms": 0.0,
         "median_gate_latency_ms": 0.0,
         "p95_gate_latency_ms": 0.0
@@ -56,11 +74,19 @@
         "regressions_blocked_by_gate": 0,
         "unblocked_regressions": 30,
         "unblocked_regression_rate_pct": 100.0,
+        "regression_ci95_low_pct": 88.65,
+        "regression_ci95_high_pct": 100.0,
+        "secondary_witnesses_synthesized": 0,
         "false_blocks": 0,
         "false_block_rate_pct": 0.0,
         "inconclusive_gates": 0,
-        "tasks_resolved": 0,
-        "resolution_rate_pct": 0.0,
+        "turn1_resolved": 0,
+        "turn1_resolution_rate_pct": 0.0,
+        "tasks_resolved": 17,
+        "resolution_rate_pct": 56.67,
+        "resolution_ci95_low_pct": 39.2,
+        "resolution_ci95_high_pct": 72.62,
+        "mean_oracle_turns_to_convergence": 2.0,
         "mean_gate_latency_ms": 0.0,
         "median_gate_latency_ms": 0.0,
         "p95_gate_latency_ms": 0.0
@@ -76,11 +102,19 @@
         "regressions_blocked_by_gate": 0,
         "unblocked_regressions": 5,
         "unblocked_regression_rate_pct": 16.67,
+        "regression_ci95_low_pct": 7.34,
+        "regression_ci95_high_pct": 33.56,
+        "secondary_witnesses_synthesized": 10,
         "false_blocks": 0,
         "false_block_rate_pct": 0.0,
         "inconclusive_gates": 0,
-        "tasks_resolved": 25,
-        "resolution_rate_pct": 83.33,
+        "turn1_resolved": 19,
+        "turn1_resolution_rate_pct": 63.33,
+        "tasks_resolved": 26,
+        "resolution_rate_pct": 86.67,
+        "resolution_ci95_low_pct": 70.32,
+        "resolution_ci95_high_pct": 94.69,
+        "mean_oracle_turns_to_convergence": 1.37,
         "mean_gate_latency_ms": 0.0,
         "median_gate_latency_ms": 0.0,
         "p95_gate_latency_ms": 0.0
@@ -96,14 +130,22 @@
         "regressions_blocked_by_gate": 5,
         "unblocked_regressions": 0,
         "unblocked_regression_rate_pct": 0.0,
+        "regression_ci95_low_pct": 0.0,
+        "regression_ci95_high_pct": 11.35,
+        "secondary_witnesses_synthesized": 11,
         "false_blocks": 0,
         "false_block_rate_pct": 0.0,
         "inconclusive_gates": 5,
-        "tasks_resolved": 30,
-        "resolution_rate_pct": 100.0,
-        "mean_gate_latency_ms": 19.55,
-        "median_gate_latency_ms": 19.467,
-        "p95_gate_latency_ms": 21.249
+        "turn1_resolved": 21,
+        "turn1_resolution_rate_pct": 70.0,
+        "tasks_resolved": 28,
+        "resolution_rate_pct": 93.33,
+        "resolution_ci95_low_pct": 78.68,
+        "resolution_ci95_high_pct": 98.15,
+        "mean_oracle_turns_to_convergence": 1.3,
+        "mean_gate_latency_ms": 23.895,
+        "median_gate_latency_ms": 19.826,
+        "p95_gate_latency_ms": 41.564
       }
     ],
     "ablation_study": [
@@ -130,11 +172,11 @@
         "inconclusive_on_evolved_contract": 5,
         "final_tasks_resolved": 30,
         "final_resolution_rate_pct": 100.0,
-        "mean_gate_latency_ms": 12.044,
-        "median_gate_latency_ms": 19.067,
-        "p95_gate_latency_ms": 21.822,
-        "mean_ledger_overhead_ms": 0.362,
-        "mean_replay_overhead_ms": 11.594
+        "mean_gate_latency_ms": 11.999,
+        "median_gate_latency_ms": 18.885,
+        "p95_gate_latency_ms": 21.723,
+        "mean_ledger_overhead_ms": 0.366,
+        "mean_replay_overhead_ms": 11.532
       },
       {
         "config_id": "ast_filter_only",
@@ -159,10 +201,10 @@
         "inconclusive_on_evolved_contract": 0,
         "final_tasks_resolved": 25,
         "final_resolution_rate_pct": 83.33,
-        "mean_gate_latency_ms": 0.337,
-        "median_gate_latency_ms": 0.3,
-        "p95_gate_latency_ms": 0.646,
-        "mean_ledger_overhead_ms": 0.336,
+        "mean_gate_latency_ms": 0.336,
+        "median_gate_latency_ms": 0.302,
+        "p95_gate_latency_ms": 0.621,
+        "mean_ledger_overhead_ms": 0.335,
         "mean_replay_overhead_ms": 0.0
       },
       {
@@ -188,11 +230,11 @@
         "inconclusive_on_evolved_contract": 5,
         "final_tasks_resolved": 30,
         "final_resolution_rate_pct": 100.0,
-        "mean_gate_latency_ms": 20.174,
-        "median_gate_latency_ms": 19.935,
-        "p95_gate_latency_ms": 22.867,
-        "mean_ledger_overhead_ms": 0.408,
-        "mean_replay_overhead_ms": 19.607
+        "mean_gate_latency_ms": 19.175,
+        "median_gate_latency_ms": 18.593,
+        "p95_gate_latency_ms": 22.005,
+        "mean_ledger_overhead_ms": 0.351,
+        "mean_replay_overhead_ms": 18.677
       },
       {
         "config_id": "unversioned_ledger",
@@ -217,11 +259,11 @@
         "inconclusive_on_evolved_contract": 0,
         "final_tasks_resolved": 25,
         "final_resolution_rate_pct": 83.33,
-        "mean_gate_latency_ms": 11.89,
-        "median_gate_latency_ms": 18.752,
-        "p95_gate_latency_ms": 21.42,
-        "mean_ledger_overhead_ms": 0.36,
-        "mean_replay_overhead_ms": 11.431
+        "mean_gate_latency_ms": 10.979,
+        "median_gate_latency_ms": 17.644,
+        "p95_gate_latency_ms": 20.695,
+        "mean_ledger_overhead_ms": 0.294,
+        "mean_replay_overhead_ms": 10.598
       }
     ],
     "category_breakdown": [
@@ -229,54 +271,78 @@
         "category": "1_boundary_conditions",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 3,
         "cegar_ledger_only_unblocked_regressions": 0,
+        "cegar_ledger_only_resolved": 5,
         "cegar_full_unblocked_regressions": 0,
+        "cegar_full_turn1_resolved": 3,
         "cegar_full_resolved": 5,
+        "cegar_full_secondary_witnesses": 2,
         "cegar_full_inconclusive_gates": 0
       },
       {
         "category": "2_parsers_state_machines",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 3,
         "cegar_ledger_only_unblocked_regressions": 0,
+        "cegar_ledger_only_resolved": 5,
         "cegar_full_unblocked_regressions": 0,
+        "cegar_full_turn1_resolved": 3,
         "cegar_full_resolved": 5,
+        "cegar_full_secondary_witnesses": 2,
         "cegar_full_inconclusive_gates": 0
       },
       {
         "category": "3_exception_handling",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 4,
         "cegar_ledger_only_unblocked_regressions": 0,
+        "cegar_ledger_only_resolved": 5,
         "cegar_full_unblocked_regressions": 0,
+        "cegar_full_turn1_resolved": 4,
         "cegar_full_resolved": 5,
+        "cegar_full_secondary_witnesses": 1,
         "cegar_full_inconclusive_gates": 0
       },
       {
         "category": "4_multi_file_changes",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 4,
         "cegar_ledger_only_unblocked_regressions": 0,
+        "cegar_ledger_only_resolved": 4,
         "cegar_full_unblocked_regressions": 0,
-        "cegar_full_resolved": 5,
+        "cegar_full_turn1_resolved": 4,
+        "cegar_full_resolved": 4,
+        "cegar_full_secondary_witnesses": 2,
         "cegar_full_inconclusive_gates": 0
       },
       {
         "category": "5_feature_regressions",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 5,
         "cegar_ledger_only_unblocked_regressions": 0,
+        "cegar_ledger_only_resolved": 5,
         "cegar_full_unblocked_regressions": 0,
+        "cegar_full_turn1_resolved": 5,
         "cegar_full_resolved": 5,
+        "cegar_full_secondary_witnesses": 0,
         "cegar_full_inconclusive_gates": 5
       },
       {
         "category": "6_syntactic_variants",
         "tasks_count": 5,
         "obs_masking_unblocked_regressions": 5,
+        "obs_masking_resolved": 2,
         "cegar_ledger_only_unblocked_regressions": 5,
+        "cegar_ledger_only_resolved": 2,
         "cegar_full_unblocked_regressions": 0,
-        "cegar_full_resolved": 5,
+        "cegar_full_turn1_resolved": 2,
+        "cegar_full_resolved": 4,
+        "cegar_full_secondary_witnesses": 4,
         "cegar_full_inconclusive_gates": 0
       }
     ],
@@ -291,8 +357,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -304,8 +373,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -317,8 +389,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -330,8 +405,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -343,8 +421,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -356,8 +437,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -369,8 +453,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -382,8 +469,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -395,8 +485,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -408,8 +501,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -421,8 +517,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -434,8 +533,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -447,8 +549,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -460,8 +565,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -473,8 +581,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -486,8 +597,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -499,8 +613,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -512,8 +629,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -525,8 +645,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -538,9 +661,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": true
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": false
         },
         {
           "task_id": "T21",
@@ -551,8 +677,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -564,8 +693,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -577,8 +709,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -590,8 +725,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -603,8 +741,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -616,9 +757,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T27",
@@ -629,9 +773,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T28",
@@ -642,8 +789,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -655,8 +805,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -668,8 +821,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         }
       ],
@@ -683,8 +839,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -696,9 +855,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T03",
@@ -709,8 +871,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -722,9 +887,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T05",
@@ -735,9 +903,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T06",
@@ -748,9 +919,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T07",
@@ -761,9 +935,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T08",
@@ -774,8 +951,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -787,9 +967,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T10",
@@ -800,8 +983,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -813,9 +999,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T12",
@@ -826,9 +1015,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T13",
@@ -839,8 +1031,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -852,9 +1047,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T15",
@@ -865,9 +1063,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T16",
@@ -878,9 +1079,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T17",
@@ -891,9 +1095,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T18",
@@ -904,9 +1111,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T19",
@@ -917,9 +1127,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T20",
@@ -930,8 +1143,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -943,9 +1159,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T22",
@@ -956,9 +1175,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T23",
@@ -969,9 +1191,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T24",
@@ -982,9 +1207,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T25",
@@ -995,9 +1223,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T26",
@@ -1008,9 +1239,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T27",
@@ -1021,9 +1255,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T28",
@@ -1034,8 +1271,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1047,8 +1287,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1060,8 +1303,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         }
       ],
@@ -1075,8 +1321,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1088,9 +1337,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T03",
@@ -1101,8 +1353,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1114,9 +1369,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T05",
@@ -1127,9 +1385,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T06",
@@ -1140,9 +1401,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T07",
@@ -1153,8 +1417,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1166,8 +1433,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1179,9 +1449,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T10",
@@ -1192,8 +1465,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1205,9 +1481,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T12",
@@ -1218,9 +1497,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T13",
@@ -1231,8 +1513,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1244,9 +1529,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T15",
@@ -1257,9 +1545,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T16",
@@ -1270,8 +1561,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1283,8 +1577,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1296,8 +1593,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1309,9 +1609,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T20",
@@ -1322,8 +1625,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1335,9 +1641,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T22",
@@ -1348,9 +1657,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T23",
@@ -1361,9 +1673,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T24",
@@ -1374,9 +1689,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T25",
@@ -1387,9 +1705,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T26",
@@ -1400,9 +1721,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T27",
@@ -1413,9 +1737,12 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T28",
@@ -1426,8 +1753,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1439,8 +1769,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1452,8 +1785,11 @@
           "witness_retained": false,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         }
       ],
@@ -1467,8 +1803,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1480,8 +1819,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1493,8 +1835,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1506,8 +1851,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1519,8 +1867,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1532,8 +1883,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1545,8 +1899,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1558,8 +1915,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1571,8 +1931,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1584,8 +1947,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1597,8 +1963,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1610,8 +1979,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1623,8 +1995,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1636,8 +2011,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1649,8 +2027,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1662,8 +2043,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1675,8 +2059,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1688,8 +2075,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1701,8 +2091,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1714,9 +2107,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 2,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": true
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": false
         },
         {
           "task_id": "T21",
@@ -1727,8 +2123,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1740,8 +2139,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1753,8 +2155,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1766,8 +2171,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1779,8 +2187,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1792,9 +2203,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T27",
@@ -1805,9 +2219,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": false
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": true
         },
         {
           "task_id": "T28",
@@ -1818,8 +2235,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1831,8 +2251,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         },
         {
@@ -1844,8 +2267,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": true,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": false
         }
       ],
@@ -1859,8 +2285,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1872,8 +2301,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1885,8 +2317,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1898,8 +2333,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1911,8 +2349,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1924,8 +2365,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1937,8 +2381,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1950,8 +2397,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1963,8 +2413,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -1976,8 +2429,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -1989,8 +2445,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2002,8 +2461,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2015,8 +2477,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -2028,8 +2493,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2041,8 +2509,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2054,8 +2525,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2067,8 +2541,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2080,8 +2557,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2093,8 +2573,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2106,9 +2589,12 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 2,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": true
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": false
         },
         {
           "task_id": "T21",
@@ -2119,8 +2605,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 1,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2132,8 +2621,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 1,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2145,8 +2637,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 1,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2158,8 +2653,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 1,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2171,8 +2669,11 @@
           "witness_retained": true,
           "blocked_by_gate": 0,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 1,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2184,8 +2685,11 @@
           "witness_retained": true,
           "blocked_by_gate": 1,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2197,8 +2701,11 @@
           "witness_retained": true,
           "blocked_by_gate": 1,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 0,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 1,
+          "turn1_resolved": true,
           "resolved": true
         },
         {
@@ -2210,8 +2717,11 @@
           "witness_retained": true,
           "blocked_by_gate": 1,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -2223,8 +2733,11 @@
           "witness_retained": true,
           "blocked_by_gate": 1,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 1,
           "false_block": false,
           "inconclusive_gate": 0,
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
           "resolved": true
         },
         {
@@ -2236,9 +2749,12 @@
           "witness_retained": true,
           "blocked_by_gate": 1,
           "unblocked_regression": false,
+          "secondary_witnesses_synthesized": 2,
           "false_block": false,
           "inconclusive_gate": 0,
-          "resolved": true
+          "oracle_turns_used": 2,
+          "turn1_resolved": false,
+          "resolved": false
         }
       ]
     }
@@ -2247,6 +2763,8 @@
     "executed": false,
     "status": "NOT_EXECUTED_NO_CONFIG",
     "model_name": "none",
+    "max_turns": 3,
+    "cli_example": "CEGAR_LLM_API_BASE=http://localhost:11434/v1 CEGAR_LLM_MODEL=qwen2.5-coder:7b cegar-harness live-eval --max-tasks 5 --max-turns 3",
     "message": "Live LLM experiment not executed: CEGAR_LLM_API_BASE and CEGAR_LLM_MODEL environment variables are not configured.",
     "results": []
   }

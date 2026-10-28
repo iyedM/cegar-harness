@@ -1,0 +1,9 @@
+{
+  "executed": false,
+  "status": "NOT_EXECUTED_NO_CONFIG",
+  "model_name": "none",
+  "max_turns": 3,
+  "cli_example": "CEGAR_LLM_API_BASE=http://localhost:11434/v1 CEGAR_LLM_MODEL=qwen2.5-coder:7b cegar-harness live-eval --max-tasks 5 --max-turns 3",
+  "message": "Live LLM experiment not executed: CEGAR_LLM_API_BASE and CEGAR_LLM_MODEL environment variables are not configured.",
+  "results": []
+}

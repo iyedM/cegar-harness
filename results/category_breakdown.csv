@@ -1,7 +1,7 @@
-category,tasks_count,obs_masking_unblocked_regressions,cegar_ledger_only_unblocked_regressions,cegar_full_unblocked_regressions,cegar_full_resolved,cegar_full_inconclusive_gates
-1_boundary_conditions,5,5,0,0,5,0
-2_parsers_state_machines,5,5,0,0,5,0
-3_exception_handling,5,5,0,0,5,0
-4_multi_file_changes,5,5,0,0,5,0
-5_feature_regressions,5,5,0,0,5,5
-6_syntactic_variants,5,5,5,0,5,0
+category,tasks_count,obs_masking_unblocked_regressions,obs_masking_resolved,cegar_ledger_only_unblocked_regressions,cegar_ledger_only_resolved,cegar_full_unblocked_regressions,cegar_full_turn1_resolved,cegar_full_resolved,cegar_full_secondary_witnesses,cegar_full_inconclusive_gates
+1_boundary_conditions,5,5,3,0,5,0,3,5,2,0
+2_parsers_state_machines,5,5,3,0,5,0,3,5,2,0
+3_exception_handling,5,5,4,0,5,0,4,5,1,0
+4_multi_file_changes,5,5,4,0,4,0,4,4,2,0
+5_feature_regressions,5,5,5,0,5,0,5,5,0,5
+6_syntactic_variants,5,5,2,5,2,0,2,4,4,0

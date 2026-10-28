@@ -19,18 +19,19 @@ def _cmd_bench(args: argparse.Namespace) -> int:
     report = run_experiment_a(output_dir=out_dir)
     exp_a = report["experiment_a_controlled_replay"]
 
-    print(f"=== CEGAR-Harness Controlled Replay Benchmark ({exp_a['total_tasks']} tasks) ===")
+    print(f"=== CEGAR-Harness Multi-Turn Controlled Replay Benchmark ({exp_a['total_tasks']} tasks) ===")
     print(
-        f"{'Strategy':<24} {'Tokens(Pre->Post)':<20} {'Comp%':>7} {'Retain%':>9} "
-        f"{'Blocked':>8} {'UnblkReg%':>10} {'Resolved%':>10}"
+        f"{'Strategy':<22} {'Comp%':>7} {'Retain%':>8} {'Blocked':>8} "
+        f"{'UnblkReg%':>10} {'2ndCE':>6} {'Turn1%':>8} {'Final% [95% CI]':<22} {'Turns':>6}"
     )
-    print("-" * 94)
+    print("-" * 105)
     for s in exp_a["strategies"]:
-        tok_str = f"{s['mean_tokens_before']:.0f} -> {s['mean_tokens_after']:.0f}"
+        ci_str = f"{s['resolution_rate_pct']:>6.2f}% [{s['resolution_ci95_low_pct']:.1f},{s['resolution_ci95_high_pct']:.1f}]"
         print(
-            f"{s['strategy']:<24} {tok_str:<20} {s['mean_compression_ratio_pct']:>6.2f}% "
-            f"{s['witness_retention_rate_pct']:>8.1f}% {s['regressions_blocked_by_gate']:>8} "
-            f"{s['unblocked_regression_rate_pct']:>9.2f}% {s['resolution_rate_pct']:>9.2f}%"
+            f"{s['strategy']:<22} {s['mean_compression_ratio_pct']:>6.2f}% "
+            f"{s['witness_retention_rate_pct']:>7.1f}% {s['regressions_blocked_by_gate']:>8} "
+            f"{s['unblocked_regression_rate_pct']:>9.2f}% {s['secondary_witnesses_synthesized']:>6} "
+            f"{s['turn1_resolution_rate_pct']:>7.2f}% {ci_str:<22} {s['mean_oracle_turns_to_convergence']:>6.2f}"
         )
 
     print("\n=== Regression Gate Ablation Study (60 Candidate Evaluations across 30 Tasks) ===")
@@ -53,8 +54,20 @@ def _cmd_bench(args: argparse.Namespace) -> int:
 
 
 def _cmd_live_eval(args: argparse.Namespace) -> int:
+    from cegar_harness.llm_provider import LiveLLMClient
+
     tasks = get_all_tasks()[: args.max_tasks]
-    res = run_experiment_b(tasks=tasks)
+    client = LiveLLMClient(
+        api_base=args.api_base,
+        api_key=args.api_key,
+        model_name=args.model,
+    )
+    res = run_experiment_b(
+        tasks=tasks,
+        client=client,
+        max_turns=args.max_turns,
+        output_dir=args.output_dir,
+    )
     print(json.dumps(res, indent=2))
     return 0
 
@@ -95,9 +108,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_live = sub.add_parser(
         "live-eval",
-        help="Run Experiment B (Live LLM Continuation; requires CEGAR_LLM_API_BASE & CEGAR_LLM_MODEL)",
+        help="Run Experiment B (Multi-Turn Live LLM Repair Loop; requires CEGAR_LLM_API_BASE & CEGAR_LLM_MODEL or CLI flags)",
     )
     p_live.add_argument("--max-tasks", type=int, default=5, help="Max tasks to evaluate live")
+    p_live.add_argument("--max-turns", type=int, default=3, help="Max post-compaction turns per task")
+    p_live.add_argument("--model", default=None, help="LLM model name override (or CEGAR_LLM_MODEL)")
+    p_live.add_argument("--api-base", default=None, help="OpenAI-compatible API base URL override")
+    p_live.add_argument("--api-key", default=None, help="API key override")
+    p_live.add_argument("--output-dir", default="results", help="Output directory for experiment_b_live_results.json")
     p_live.set_defaults(func=_cmd_live_eval)
 
     p_insp = sub.add_parser("inspect-ledger", help="Inspect stored counterexamples in SQLite ledger")
