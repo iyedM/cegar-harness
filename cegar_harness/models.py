@@ -101,4 +101,6 @@ class TaskSpec:
     pre_compaction_failed_patch: CandidatePatch
     verbose_observations: List[str]
     post_compaction_candidates: List[CandidatePatch]
+    partial_coverage_candidates: List[CandidatePatch] = field(default_factory=list)
+    lossy_distractor_candidates: List[CandidatePatch] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)

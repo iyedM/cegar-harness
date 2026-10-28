@@ -1,4 +1,4 @@
-"""Benchmark Runner for Experiment A (Controlled Replay + Ablation) and Experiment B (Live LLM)."""
+"""Benchmark Runner for Experiment A (Multi-Turn Controlled Replay + Ablation) and Experiment B (Multi-Turn Live LLM)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import statistics
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from cegar_harness.ast_filter import compute_canonical_ast_hash
 from cegar_harness.compactor import CompactionController, TrajectoryTurn
@@ -38,6 +38,20 @@ def _percentile(values: List[float], pct: float) -> float:
     return ordered[idx]
 
 
+def _wilson_ci_95(successes: int, total: int) -> Tuple[float, float]:
+    """Computes the 95% Wilson score confidence interval (in percentage points) for a binomial proportion."""
+    if total <= 0:
+        return (0.0, 0.0)
+    z = 1.959963984540054  # 95% normal quantile
+    phat = successes / total
+    denom = 1.0 + (z * z) / total
+    center = (phat + (z * z) / (2.0 * total)) / denom
+    half_width = (z * math.sqrt((phat * (1.0 - phat) + (z * z) / (4.0 * total)) / total)) / denom
+    low = max(0.0, (center - half_width) * 100.0)
+    high = min(100.0, (center + half_width) * 100.0)
+    return (round(low, 2), round(high, 2))
+
+
 @dataclass
 class StrategySummaryMetrics:
     """Aggregated empirical metrics for a single CompactionStrategy across all 30 tasks."""
@@ -52,11 +66,19 @@ class StrategySummaryMetrics:
     regressions_blocked_by_gate: int
     unblocked_regressions: int
     unblocked_regression_rate_pct: float
+    regression_ci95_low_pct: float
+    regression_ci95_high_pct: float
+    secondary_witnesses_synthesized: int
     false_blocks: int
     false_block_rate_pct: float
     inconclusive_gates: int
+    turn1_resolved: int
+    turn1_resolution_rate_pct: float
     tasks_resolved: int
     resolution_rate_pct: float
+    resolution_ci95_low_pct: float
+    resolution_ci95_high_pct: float
+    mean_oracle_turns_to_convergence: float
     mean_gate_latency_ms: float
     median_gate_latency_ms: float
     p95_gate_latency_ms: float
@@ -147,8 +169,9 @@ def _build_pre_compaction_turns(task: TaskSpec, failure_predicate: str) -> List[
 def run_experiment_a(
     output_dir: str | Path = "results",
     tasks: Optional[List[TaskSpec]] = None,
+    max_oracle_turns: int = 2,
 ) -> Dict[str, Any]:
-    """Executes Experiment A (Controlled Replay Benchmark + 4-way Ablation Study) on all 30 tasks."""
+    """Executes Experiment A (Multi-Turn Controlled Replay + Partial Witness Coverage + 4-way Ablation)."""
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -193,7 +216,7 @@ def run_experiment_a(
         ledger.record(ce)
         pre_compaction_predicates[task.task_id] = exec_res.failure_predicate
 
-    # 2. Evaluate the 5 Context Compaction Strategies
+    # 2. Evaluate the 5 Context Compaction Strategies under a bounded multi-turn oracle budget
     strategy_summaries: List[StrategySummaryMetrics] = []
     per_task_strategy_details: Dict[str, List[Dict[str, Any]]] = {}
 
@@ -204,13 +227,20 @@ def run_experiment_a(
         retained_count = 0
         blocked_by_gate = 0
         unblocked_regressions = 0
+        secondary_witnesses = 0
         false_blocks = 0
         inconclusive_count = 0
+        turn1_resolved_count = 0
         resolved_count = 0
+        oracle_turns_list: List[int] = []
         gate_latencies: List[float] = []
         task_rows: List[Dict[str, Any]] = []
 
         use_gate = strategy == CompactionStrategy.CEGAR_HARNESS_FULL
+        tracks_ledger = strategy in (
+            CompactionStrategy.CEGAR_LEDGER_ONLY,
+            CompactionStrategy.CEGAR_HARNESS_FULL,
+        )
         gate = RegressionGate(
             ledger=ledger,
             runner=runner,
@@ -246,27 +276,40 @@ def run_experiment_a(
                 retained_count += 1
 
             c1_reg, c2_fix = task.post_compaction_candidates[0], task.post_compaction_candidates[1]
+            partials = list(task.partial_coverage_candidates)
+            distractors = (
+                list(task.lossy_distractor_candidates)
+                if strategy == CompactionStrategy.LOSSY_SUMMARY
+                else []
+            )
 
-            # Deterministic candidate proposal rules conditioned on witness retention in context:
-            # - If witness predicate was lost during compaction, the agent proposes [c1_reg, c2_fix].
-            # - If witness predicate was retained in context, exact/alpha-renamed repeats (Categories 1-5)
-            #   are avoided in prompt, EXCEPT for syntactic variants (Category 6) where prompt text alone
-            #   does not prevent a syntactically distinct implementation of the same logical bug.
+            # Candidate proposal queue conditioned on witness retention + partial witness coverage:
+            # - If witness predicate was lost (OBSERVATION_MASKING, LOSSY_SUMMARY), the agent proposes
+            #   [c1_reg, *distractors, *partials, c2_fix].
+            # - If witness predicate was retained (FULL_HISTORY, CEGAR_LEDGER_ONLY, CEGAR_HARNESS_FULL),
+            #   exact/alpha-renamed repeats on Categories 1-5 are avoided in prompt, EXCEPT Category 6
+            #   syntactic variants where prompt text alone does not prevent a syntactically distinct rewrite.
             if not comp_res.witness_predicate_retained:
-                proposed_queue: List[CandidatePatch] = [c1_reg, c2_fix]
+                proposed_queue: List[CandidatePatch] = [c1_reg, *distractors, *partials, c2_fix]
             else:
                 if c1_reg.syntactic_variant_of is not None:
-                    proposed_queue = [c1_reg, c2_fix]
+                    proposed_queue = [c1_reg, *partials, c2_fix]
                 else:
-                    proposed_queue = [c2_fix]
+                    proposed_queue = [*partials, c2_fix]
 
             task_resolved = False
+            task_turn1_resolved = False
             task_unblocked_regression = False
             task_blocked_count = 0
+            task_secondary_witnesses = 0
             task_false_block = False
             task_inconclusive = 0
+            oracle_turns_used = 0
 
             for cand in proposed_queue:
+                if oracle_turns_used >= max_oracle_turns:
+                    break
+
                 if use_gate:
                     gate_res = gate.evaluate(
                         task_id=task.task_id,
@@ -281,26 +324,53 @@ def run_experiment_a(
                         else:
                             blocked_by_gate += 1
                             task_blocked_count += 1
-                        # Gate rejected candidate; move to next candidate in trajectory queue
+                        # Pre-execution gate intercepted the regression before consuming an oracle turn
                         continue
                     elif gate_res.status == GateStatus.INCONCLUSIVE:
                         inconclusive_count += 1
                         task_inconclusive += 1
 
-                # Candidate reaches full reference oracle evaluation
+                # Candidate reaches full reference oracle evaluation (consumes 1 oracle turn)
+                oracle_turns_used += 1
                 witness_check = runner.run_test_code(cand.files, task.witness_test_code)
                 oracle_check = runner.run_test_code(cand.files, task.reference_test_code)
 
                 if not oracle_check.passed:
                     if not witness_check.passed or cand.is_known_regression:
-                        unblocked_regressions += 1
-                        task_unblocked_regression = True
-                    break
+                        if not task_unblocked_regression:
+                            unblocked_regressions += 1
+                            task_unblocked_regression = True
+                    else:
+                        # Candidate passed initial witness (Partial Witness Coverage) but failed reference suite!
+                        if tracks_ledger:
+                            secondary_witnesses += 1
+                            task_secondary_witnesses += 1
+                            if use_gate:
+                                ce_round2 = CounterexampleRecord(
+                                    ce_id=f"CE-{task.task_id}-0{1 + task_secondary_witnesses}",
+                                    task_id=task.task_id,
+                                    target_file=task.target_file,
+                                    target_symbol=task.target_symbol,
+                                    contract_version=cand.contract_version,
+                                    ast_hash=compute_canonical_ast_hash(cand.files),
+                                    witness_name=f"test_secondary_refinement_{task_secondary_witnesses}",
+                                    witness_test_code=task.witness_test_code,
+                                    failure_predicate=oracle_check.failure_predicate,
+                                    discovered_at_step=6 + oracle_turns_used,
+                                    status="ACTIVE",
+                                    provenance="partial_witness_refinement",
+                                )
+                                ledger.record(ce_round2)
+                    continue
                 else:
                     task_resolved = True
                     resolved_count += 1
+                    if oracle_turns_used == 1:
+                        task_turn1_resolved = True
+                        turn1_resolved_count += 1
                     break
 
+            oracle_turns_list.append(oracle_turns_used)
             task_rows.append(
                 {
                     "task_id": task.task_id,
@@ -311,13 +381,19 @@ def run_experiment_a(
                     "witness_retained": comp_res.witness_predicate_retained,
                     "blocked_by_gate": task_blocked_count,
                     "unblocked_regression": task_unblocked_regression,
+                    "secondary_witnesses_synthesized": task_secondary_witnesses,
                     "false_block": task_false_block,
                     "inconclusive_gate": task_inconclusive,
+                    "oracle_turns_used": oracle_turns_used,
+                    "turn1_resolved": task_turn1_resolved,
                     "resolved": task_resolved,
                 }
             )
 
         n_tasks = len(task_list)
+        reg_ci_low, reg_ci_high = _wilson_ci_95(unblocked_regressions, n_tasks)
+        res_ci_low, res_ci_high = _wilson_ci_95(resolved_count, n_tasks)
+
         strategy_summaries.append(
             StrategySummaryMetrics(
                 strategy=strategy.value,
@@ -330,11 +406,19 @@ def run_experiment_a(
                 regressions_blocked_by_gate=blocked_by_gate,
                 unblocked_regressions=unblocked_regressions,
                 unblocked_regression_rate_pct=round((unblocked_regressions / n_tasks) * 100.0, 2),
+                regression_ci95_low_pct=reg_ci_low,
+                regression_ci95_high_pct=reg_ci_high,
+                secondary_witnesses_synthesized=secondary_witnesses,
                 false_blocks=false_blocks,
                 false_block_rate_pct=round((false_blocks / n_tasks) * 100.0, 2),
                 inconclusive_gates=inconclusive_count,
+                turn1_resolved=turn1_resolved_count,
+                turn1_resolution_rate_pct=round((turn1_resolved_count / n_tasks) * 100.0, 2),
                 tasks_resolved=resolved_count,
                 resolution_rate_pct=round((resolved_count / n_tasks) * 100.0, 2),
+                resolution_ci95_low_pct=res_ci_low,
+                resolution_ci95_high_pct=res_ci_high,
+                mean_oracle_turns_to_convergence=round(sum(oracle_turns_list) / n_tasks, 2),
                 mean_gate_latency_ms=round(sum(gate_latencies) / len(gate_latencies), 3)
                 if gate_latencies
                 else 0.0,
@@ -348,7 +432,14 @@ def run_experiment_a(
         )
         per_task_strategy_details[strategy.value] = task_rows
 
-    # 3. Run 4-Way RegressionGate Ablation Study across all 30 tasks ([c1_reg, c2_fix] evaluated on every task)
+    # 3. Reset ledger to initial pre-compaction state before running the 4-Way RegressionGate Ablation Study
+    #    so all 4 ablation configs evaluate against the identical initial 30 witnesses (CE-T01-01 .. CE-T30-01)
+    ablation_ledger = CounterexampleLedger(":memory:")
+    for task in task_list:
+        for ce in ledger.get_by_task(task.task_id, include_resolved=True):
+            if ce.ce_id.endswith("-01"):
+                ablation_ledger.record(ce)
+
     ablation_configs = [
         (
             "full_cegar_harness",
@@ -383,7 +474,7 @@ def run_experiment_a(
     ablation_summaries: List[AblationSummaryMetrics] = []
     for cfg_id, desc, ast_on, replay_on, ver_on in ablation_configs:
         gate = RegressionGate(
-            ledger=ledger,
+            ledger=ablation_ledger,
             runner=runner,
             telemetry=telemetry,
             enable_ast_filter=ast_on,
@@ -443,8 +534,8 @@ def run_experiment_a(
             elif res_c2.status == GateStatus.INCONCLUSIVE:
                 inconc_evolved += 1
 
-            # A task resolves in the [c1_reg, c2_fix] trajectory iff c1_reg is blocked by the gate
-            # and c2_fix is NOT falsely blocked by the gate (and passes the reference oracle).
+            # A task resolves in the 2-candidate ablation probe [c1_reg, c2_fix] iff c1_reg is blocked
+            # by the gate and c2_fix is NOT falsely blocked by the gate (and passes the reference oracle).
             if c1_blocked and not c2_blocked:
                 oracle_res = runner.run_test_code(c2_fix.files, task.reference_test_code)
                 if oracle_res.passed:
@@ -491,6 +582,7 @@ def run_experiment_a(
                 else 0.0,
             )
         )
+    ablation_ledger.close()
 
     # 4. Compute Per-Category Breakdown across key strategies and ablations
     category_breakdown: List[Dict[str, Any]] = []
@@ -520,24 +612,32 @@ def run_experiment_a(
                 "category": cat.value,
                 "tasks_count": n_cat,
                 "obs_masking_unblocked_regressions": sum(1 for r in mask_rows if r["unblocked_regression"]),
+                "obs_masking_resolved": sum(1 for r in mask_rows if r["resolved"]),
                 "cegar_ledger_only_unblocked_regressions": sum(
                     1 for r in ledger_rows if r["unblocked_regression"]
                 ),
+                "cegar_ledger_only_resolved": sum(1 for r in ledger_rows if r["resolved"]),
                 "cegar_full_unblocked_regressions": sum(1 for r in full_rows if r["unblocked_regression"]),
+                "cegar_full_turn1_resolved": sum(1 for r in full_rows if r["turn1_resolved"]),
                 "cegar_full_resolved": sum(1 for r in full_rows if r["resolved"]),
+                "cegar_full_secondary_witnesses": sum(
+                    r["secondary_witnesses_synthesized"] for r in full_rows
+                ),
                 "cegar_full_inconclusive_gates": sum(r["inconclusive_gate"] for r in full_rows),
             }
         )
 
     # 5. Experiment B status check (never simulated if unconfigured)
-    exp_b_result = run_experiment_b(tasks=task_list[:3])
+    exp_b_result = run_experiment_b(tasks=task_list[:3], output_dir=out_path)
 
     report = {
         "generated_at_epoch": time.time(),
-        "benchmark_version": "0.1.0",
+        "benchmark_version": "0.2.0",
+        "max_oracle_turns": max_oracle_turns,
         "experiment_a_controlled_replay": {
             "total_tasks": len(task_list),
             "categories_count": len(BugCategory),
+            "max_oracle_turns": max_oracle_turns,
             "strategies": [asdict(s) for s in strategy_summaries],
             "ablation_study": [asdict(a) for a in ablation_summaries],
             "category_breakdown": category_breakdown,
@@ -554,85 +654,185 @@ def run_experiment_a(
 def run_experiment_b(
     tasks: Optional[List[TaskSpec]] = None,
     client: Optional[LiveLLMClient] = None,
+    max_turns: int = 3,
+    strategies: Optional[List[CompactionStrategy]] = None,
+    output_dir: Optional[str | Path] = None,
 ) -> Dict[str, Any]:
-    """Executes Experiment B (Live LLM Agent Continuation) if configured, or reports NOT_EXECUTED_NO_CONFIG."""
+    """Executes Experiment B (Multi-Turn Live Agent Repair Loop) if configured, or reports NOT_EXECUTED_NO_CONFIG."""
     llm = client or LiveLLMClient()
     if not llm.is_configured:
-        Probe = llm.generate_patch("", "")
-        return {
+        probe = llm.generate_patch("", "")
+        res_payload = {
             "executed": False,
-            "status": Probe.status,
-            "model_name": Probe.model_name,
-            "message": Probe.error_message,
+            "status": probe.status,
+            "model_name": probe.model_name,
+            "max_turns": max_turns,
+            "cli_example": (
+                "CEGAR_LLM_API_BASE=http://localhost:11434/v1 "
+                "CEGAR_LLM_MODEL=qwen2.5-coder:7b "
+                "cegar-harness live-eval --max-tasks 5 --max-turns 3"
+            ),
+            "message": probe.error_message,
             "results": [],
         }
+        if output_dir:
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            (Path(output_dir) / "experiment_b_live_results.json").write_text(
+                json.dumps(res_payload, indent=2), encoding="utf-8"
+            )
+        return res_payload
 
     task_list = tasks if tasks is not None else get_all_tasks()[:5]
+    eval_strategies = strategies or [
+        CompactionStrategy.LOSSY_SUMMARY,
+        CompactionStrategy.OBSERVATION_MASKING,
+        CompactionStrategy.CEGAR_LEDGER_ONLY,
+        CompactionStrategy.CEGAR_HARNESS_FULL,
+    ]
     runner = IsolatedTestRunner(timeout_seconds=5.0)
     compactor = CompactionController(sliding_window_turns=2)
-    ledger = CounterexampleLedger(":memory:")
 
     live_results: List[Dict[str, Any]] = []
-    for task in task_list:
-        exec_res = runner.run_test_code(
-            task.pre_compaction_failed_patch.files, task.witness_test_code
-        )
-        ce = CounterexampleRecord(
-            ce_id=f"CE-{task.task_id}-LIVE",
-            task_id=task.task_id,
-            target_file=task.target_file,
-            target_symbol=task.target_symbol,
-            contract_version=task.contract_version_initial,
-            ast_hash=compute_canonical_ast_hash(task.pre_compaction_failed_patch.files),
-            witness_name=task.witness_name,
-            witness_test_code=task.witness_test_code,
-            failure_predicate=exec_res.failure_predicate,
-            discovered_at_step=2,
-        )
-        ledger.record(ce)
-        turns = _build_pre_compaction_turns(task, exec_res.failure_predicate)
-        comp = compactor.compact(
-            task.task_id,
-            task.specification,
-            task.contract_version_initial,
-            turns,
-            CompactionStrategy.CEGAR_HARNESS_FULL,
-            ledger,
-        )
-        gen = llm.generate_patch(comp.rendered_context, task.target_file)
-        if not gen.executed:
+    for strategy in eval_strategies:
+        use_gate = strategy == CompactionStrategy.CEGAR_HARNESS_FULL
+        for task in task_list:
+            ledger = CounterexampleLedger(":memory:")
+            exec_res = runner.run_test_code(
+                task.pre_compaction_failed_patch.files, task.witness_test_code
+            )
+            ce = CounterexampleRecord(
+                ce_id=f"CE-{task.task_id}-LIVE-01",
+                task_id=task.task_id,
+                target_file=task.target_file,
+                target_symbol=task.target_symbol,
+                contract_version=task.contract_version_initial,
+                ast_hash=compute_canonical_ast_hash(task.pre_compaction_failed_patch.files),
+                witness_name=task.witness_name,
+                witness_test_code=task.witness_test_code,
+                failure_predicate=exec_res.failure_predicate,
+                discovered_at_step=2,
+            )
+            ledger.record(ce)
+            turns = _build_pre_compaction_turns(task, exec_res.failure_predicate)
+            comp = compactor.compact(
+                task.task_id,
+                task.specification,
+                task.contract_version_initial,
+                turns,
+                strategy,
+                ledger,
+            )
+            gate = RegressionGate(ledger=ledger, runner=runner)
+            repair_feedback: List[str] = []
+            turn_traces: List[Dict[str, Any]] = []
+            resolved = False
+            total_prompt_tokens = 0
+            total_completion_tokens = 0
+            gate_blocks = 0
+
+            for turn_idx in range(1, max_turns + 1):
+                gen = llm.generate_patch(
+                    comp.rendered_context,
+                    task.target_file,
+                    repair_feedback=repair_feedback if repair_feedback else None,
+                )
+                if not gen.executed:
+                    turn_traces.append(
+                        {
+                            "turn": turn_idx,
+                            "status": gen.status,
+                            "error": gen.error_message,
+                        }
+                    )
+                    break
+
+                total_prompt_tokens += gen.prompt_tokens
+                total_completion_tokens += gen.completion_tokens
+                candidate_files = dict(task.initial_files)
+                candidate_files[task.target_file] = gen.generated_code
+
+                if use_gate:
+                    gate_res = gate.evaluate(
+                        task.task_id, candidate_files, task.contract_version_post_compaction
+                    )
+                    if gate_res.status == GateStatus.REGRESSION_DETECTED:
+                        gate_blocks += 1
+                        repair_feedback.append(
+                            f"Turn {turn_idx} rejected by RegressionGate ({gate_res.matched_ce_id}): {gate_res.reason}"
+                        )
+                        turn_traces.append(
+                            {
+                                "turn": turn_idx,
+                                "gate_status": gate_res.status.value,
+                                "triggered_by": gate_res.triggered_by,
+                                "matched_ce_id": gate_res.matched_ce_id,
+                                "oracle_executed": False,
+                                "oracle_passed": False,
+                            }
+                        )
+                        continue
+                else:
+                    gate_res = None
+
+                oracle_res = runner.run_test_code(candidate_files, task.reference_test_code)
+                turn_traces.append(
+                    {
+                        "turn": turn_idx,
+                        "gate_status": gate_res.status.value if gate_res else "BYPASSED",
+                        "oracle_executed": True,
+                        "oracle_passed": oracle_res.passed,
+                        "failure_predicate": oracle_res.failure_predicate,
+                    }
+                )
+                if oracle_res.passed:
+                    resolved = True
+                    break
+
+                # Synthesize counterexample for next turn and append feedback
+                new_ce = CounterexampleRecord(
+                    ce_id=f"CE-{task.task_id}-LIVE-0{turn_idx + 1}",
+                    task_id=task.task_id,
+                    target_file=task.target_file,
+                    target_symbol=task.target_symbol,
+                    contract_version=task.contract_version_post_compaction,
+                    ast_hash=compute_canonical_ast_hash(candidate_files),
+                    witness_name=f"test_live_turn_{turn_idx}",
+                    witness_test_code=task.reference_test_code,
+                    failure_predicate=oracle_res.failure_predicate,
+                    discovered_at_step=6 + turn_idx,
+                )
+                ledger.record(new_ce)
+                repair_feedback.append(
+                    f"Turn {turn_idx} failed reference suite: {oracle_res.failure_predicate}"
+                )
+
+            ledger.close()
             live_results.append(
                 {
                     "task_id": task.task_id,
-                    "status": gen.status,
-                    "error": gen.error_message,
+                    "strategy": strategy.value,
+                    "resolved": resolved,
+                    "turns_executed": len(turn_traces),
+                    "gate_blocks": gate_blocks,
+                    "total_prompt_tokens": total_prompt_tokens,
+                    "total_completion_tokens": total_completion_tokens,
+                    "turn_traces": turn_traces,
                 }
             )
-            continue
 
-        candidate_files = dict(task.initial_files)
-        candidate_files[task.target_file] = gen.generated_code
-        gate = RegressionGate(ledger=ledger, runner=runner)
-        gate_res = gate.evaluate(task.task_id, candidate_files, task.contract_version_post_compaction)
-        oracle_res = runner.run_test_code(candidate_files, task.reference_test_code)
-        live_results.append(
-            {
-                "task_id": task.task_id,
-                "status": "EXECUTED",
-                "gate_status": gate_res.status.value,
-                "oracle_passed": oracle_res.passed,
-                "prompt_tokens": gen.prompt_tokens,
-                "completion_tokens": gen.completion_tokens,
-            }
-        )
-
-    ledger.close()
-    return {
+    payload = {
         "executed": True,
         "status": "EXECUTED",
         "model_name": llm.model_name,
+        "max_turns": max_turns,
         "results": live_results,
     }
+    if output_dir:
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        (Path(output_dir) / "experiment_b_live_results.json").write_text(
+            json.dumps(payload, indent=2), encoding="utf-8"
+        )
+    return payload
 
 
 def _export_reports(
@@ -677,17 +877,21 @@ def _export_reports(
     md_lines = [
         "# CEGAR-Harness Empirical Benchmark Report",
         "",
-        "## 1. Experiment A: Context Compaction Strategies (30 Tasks)",
+        "## 1. Experiment A: Multi-Turn Context Compaction Strategies (30 Tasks, Max 2 Oracle Turns)",
         "",
-        "| Strategy | Mean Tokens Before | Mean Tokens After | Compression (%) | Witness Retention (%) | Gate Blocked | Unblocked Regressions (%) | False Block (%) | Resolution Rate (%) |",
-        "| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| Strategy | Tokens (Before -> After) | Comp. (%) | Witness Retention (%) | Gate Blocked | Unblocked Reg. (%) [95% CI] | 2nd-Round Witnesses | Turn-1 Resolved (%) | Final Resolved (%) [95% CI] | Mean Oracle Turns |",
+        "| :--- | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for s in strategies:
         md_lines.append(
-            f"| `{s.strategy}` | {s.mean_tokens_before:.1f} | {s.mean_tokens_after:.1f} | "
+            f"| `{s.strategy}` | {s.mean_tokens_before:.1f} -> {s.mean_tokens_after:.1f} | "
             f"{s.mean_compression_ratio_pct:.2f}% | {s.witness_retention_rate_pct:.1f}% | "
-            f"{s.regressions_blocked_by_gate} | {s.unblocked_regression_rate_pct:.2f}% ({s.unblocked_regressions}/{s.tasks_total}) | "
-            f"{s.false_block_rate_pct:.2f}% | {s.resolution_rate_pct:.2f}% ({s.tasks_resolved}/{s.tasks_total}) |"
+            f"{s.regressions_blocked_by_gate} | "
+            f"{s.unblocked_regression_rate_pct:.2f}% [{s.regression_ci95_low_pct:.1f}, {s.regression_ci95_high_pct:.1f}] | "
+            f"{s.secondary_witnesses_synthesized} | "
+            f"{s.turn1_resolution_rate_pct:.2f}% ({s.turn1_resolved}/{s.tasks_total}) | "
+            f"{s.resolution_rate_pct:.2f}% ({s.tasks_resolved}/{s.tasks_total}) [{s.resolution_ci95_low_pct:.1f}, {s.resolution_ci95_high_pct:.1f}] | "
+            f"{s.mean_oracle_turns_to_convergence:.2f} |"
         )
 
     md_lines.extend(
@@ -717,19 +921,23 @@ def _export_reports(
     md_lines.extend(
         [
             "",
-            "## 3. Experiment A: Per-Category Regression Breakdown",
+            "## 3. Experiment A: Per-Category Regression & Convergence Breakdown",
             "",
-            "| Category | Tasks | Obs. Masking Unblocked Reg. | CEGAR Ledger-Only Unblocked Reg. | CEGAR Full Unblocked Reg. | CEGAR Full Resolved | Inconclusive (Contract Drift) |",
-            "| :--- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Category | Tasks | Obs. Masking Unblocked Reg. | Obs. Masking Resolved | CEGAR Ledger-Only Unblocked Reg. | CEGAR Ledger-Only Resolved | CEGAR Full Unblocked Reg. | CEGAR Full Turn-1 Resolved | CEGAR Full Final Resolved | 2nd-Round Witnesses | Inconclusive |",
+            "| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for c in categories:
         md_lines.append(
             f"| `{c['category']}` | {c['tasks_count']} | "
             f"{c['obs_masking_unblocked_regressions']}/{c['tasks_count']} | "
+            f"{c['obs_masking_resolved']}/{c['tasks_count']} | "
             f"{c['cegar_ledger_only_unblocked_regressions']}/{c['tasks_count']} | "
+            f"{c['cegar_ledger_only_resolved']}/{c['tasks_count']} | "
             f"{c['cegar_full_unblocked_regressions']}/{c['tasks_count']} | "
+            f"{c['cegar_full_turn1_resolved']}/{c['tasks_count']} | "
             f"{c['cegar_full_resolved']}/{c['tasks_count']} | "
+            f"{c['cegar_full_secondary_witnesses']} | "
             f"{c['cegar_full_inconclusive_gates']} |"
         )
 
@@ -737,11 +945,12 @@ def _export_reports(
     md_lines.extend(
         [
             "",
-            "## 4. Experiment B: Live LLM Agent Continuation",
+            "## 4. Experiment B: Multi-Turn Live LLM Agent Repair Loop",
             "",
             f"- **Status:** `{exp_b['status']}`",
             f"- **Executed:** `{exp_b['executed']}`",
             f"- **Model:** `{exp_b['model_name']}`",
+            f"- **Max Post-Compaction Turns:** `{exp_b.get('max_turns', 3)}`",
             f"- **Note:** {exp_b.get('message', 'Live LLM execution completed.')}",
             "",
         ]

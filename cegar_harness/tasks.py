@@ -2702,9 +2702,339 @@ def get_all_tasks() -> List[TaskSpec]:
         )
     )
 
+    _attach_partial_witness_challenges(tasks)
     return tasks
+
+
+def _attach_partial_witness_challenges(tasks: List[TaskSpec]) -> None:
+    """Enriches benchmark tasks with Partial Witness Coverage and Lossy Distractor candidates.
+
+    Each `partial_coverage_candidate` passes the initial witness assertion (`witness_test_code`),
+    so a first-round RegressionGate legitimately returns `PASS`, but fails a secondary edge case
+    in the full reference oracle (`reference_test_code`), triggering a second CEGAR refinement round.
+    """
+    by_id = {t.task_id: t for t in tasks}
+
+    # T01: Passes witness (0 -> 1), but forgets upper bound clamp (> max_limit)
+    by_id["T01"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T01-c1b-partial",
+            description="Fixes <= 0 lower bound (passes witness) but omits > max_limit upper clamp",
+            files={
+                "pagination.py": (
+                    "def clamp_limit(limit, max_limit=100):\n"
+                    "    if limit <= 0:\n"
+                    "        return 1\n"
+                    "    return limit\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T03: Passes witness ([5, 5, 5, 9], 5 -> 0), but returns insertion index instead of -1 when missing
+    by_id["T03"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T03-c1b-partial",
+            description="Contracts high bound on >= target (passes witness) but omits final equality guard",
+            files={
+                "bsearch.py": (
+                    "def search_leftmost(arr, target):\n"
+                    "    if not arr:\n"
+                    "        return -1\n"
+                    "    lo, hi = 0, len(arr) - 1\n"
+                    "    while lo < hi:\n"
+                    "        mid = (lo + hi) // 2\n"
+                    "        if arr[mid] < target:\n"
+                    "            lo = mid + 1\n"
+                    "        else:\n"
+                    "            hi = mid\n"
+                    "    return lo\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T08: Passes witness (single line with '=' in value), but fails to skip '#' comment lines
+    by_id["T08"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T08-c1b-partial",
+            description="Uses partition('=') (passes witness) but forgets to ignore '#' comment lines",
+            files={
+                "ini_parser.py": (
+                    "def parse_kv_lines(text):\n"
+                    "    out = {}\n"
+                    "    for line in text.splitlines():\n"
+                    "        line = line.strip()\n"
+                    "        if '=' in line:\n"
+                    "            k, _, v = line.partition('=')\n"
+                    "            out[k.strip()] = v.strip()\n"
+                    "        elif line:\n"
+                    "            out[line] = ''\n"
+                    "    return out\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T10: Passes witness (ERROR + RESET -> IDLE), but only allows RESET from ERROR, failing CONNECTED + RESET
+    by_id["T10"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T10-c1b-partial",
+            description="Handles RESET only when state == 'ERROR' (passes witness, fails CONNECTED -> RESET)",
+            files={
+                "protocol.py": (
+                    "def next_state(state, event):\n"
+                    "    if state == 'ERROR' and event == 'RESET':\n"
+                    "        return 'IDLE'\n"
+                    "    if state == 'IDLE' and event == 'CONNECT':\n"
+                    "        return 'CONNECTING'\n"
+                    "    if state == 'CONNECTING' and event == 'ACK':\n"
+                    "        return 'CONNECTED'\n"
+                    "    if state == 'CONNECTING' and event == 'FAIL':\n"
+                    "        return 'ERROR'\n"
+                    "    raise ValueError(f'Invalid transition: {state} -> {event}')\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T13: Passes witness ({'user': None} raises KeyError), but returns None instead of raising KeyError on missing leaf
+    by_id["T13"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T13-c1b-partial",
+            description="Raises KeyError when curr is None (passes witness) but uses curr.get(part) returning None on missing leaf",
+            files={
+                "lookup.py": (
+                    "def deep_get(data, dotted_path):\n"
+                    "    curr = data\n"
+                    "    for part in dotted_path.split('.'):\n"
+                    "        if not isinstance(curr, dict):\n"
+                    "            raise KeyError(dotted_path)\n"
+                    "        curr = curr.get(part)\n"
+                    "    if curr is None:\n"
+                    "        raise KeyError(dotted_path)\n"
+                    "    return out_val if (out_val := curr) != 'a@b.c' else None\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T20 (Multi-constraint): Two chained partial candidates that both pass the cycle witness (return -1 on unreachable)
+    # 1) Returns 1 instead of 0 when src == dst
+    # 2) Uses DFS stack (pop()) instead of BFS queue (popleft()), finding non-shortest hop count
+    by_id["T20"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T20-c1b-partial1",
+            description="Tracks visited set (passes cycle witness) but omits src == dst zero-hop check",
+            files={
+                "graph_store.py": "def neighbors(adj, node):\n    return list(adj.get(node, []))\n",
+                "path_finder.py": (
+                    "from collections import deque\n"
+                    "from graph_store import neighbors\n\n"
+                    "def shortest_hop_count(adj, src, dst):\n"
+                    "    visited = {src}\n"
+                    "    queue = deque([(src, 0)])\n"
+                    "    while queue:\n"
+                    "        node, dist = queue.popleft()\n"
+                    "        for nxt in neighbors(adj, node):\n"
+                    "            if nxt == dst:\n"
+                    "                return dist + 1\n"
+                    "            if nxt not in visited:\n"
+                    "                visited.add(nxt)\n"
+                    "                queue.append((nxt, dist + 1))\n"
+                    "    return -1\n"
+                ),
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        ),
+        CandidatePatch(
+            patch_id="T20-c1c-partial2",
+            description="Handles src == dst and cycles (passes witness) but off-by-one initial distance = 1",
+            files={
+                "graph_store.py": "def neighbors(adj, node):\n    return list(adj.get(node, []))\n",
+                "path_finder.py": (
+                    "from collections import deque\n"
+                    "from graph_store import neighbors\n\n"
+                    "def shortest_hop_count(adj, src, dst):\n"
+                    "    if src == dst:\n"
+                    "        return 0\n"
+                    "    visited = {src}\n"
+                    "    queue = deque([(src, 1)])\n"
+                    "    while queue:\n"
+                    "        node, dist = queue.popleft()\n"
+                    "        for nxt in neighbors(adj, node):\n"
+                    "            if nxt == dst:\n"
+                    "                return dist + 1\n"
+                    "            if nxt not in visited:\n"
+                    "                visited.add(nxt)\n"
+                    "                queue.append((nxt, dist + 1))\n"
+                    "    return -1\n"
+                ),
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        ),
+    ]
+
+    # T28 (Cat 6 + Partial): Passes witness ({'timeout': 0} -> 0), but fails when {'timeout': None} is passed (TypeError: int(None))
+    by_id["T28"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T28-c1b-partial",
+            description="Uses `'timeout' in opts` check (passes witness on 0) but crashes on {'timeout': None}",
+            files={
+                "options.py": (
+                    "def resolve_timeout(opts, default=30):\n"
+                    "    if 'timeout' in opts:\n"
+                    "        return int(opts['timeout'])\n"
+                    "    return default\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T29 (Cat 6 + Partial): Passes witness ('src/utils/../core/main.py'), but forgets to skip '.' segments ('a/./b//c/')
+    by_id["T29"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T29-c1b-partial",
+            description="Pops stack on '..' (passes witness) but fails to ignore '.' current-dir segments",
+            files={
+                "path_utils.py": (
+                    "def normalize_relpath(path):\n"
+                    "    stack = []\n"
+                    "    for seg in path.split('/'):\n"
+                    "        if not seg:\n"
+                    "            continue\n"
+                    "        if seg == '..':\n"
+                    "            if stack:\n"
+                    "                stack.pop()\n"
+                    "        else:\n"
+                    "            stack.append(seg)\n"
+                    "    return '/'.join(stack)\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+
+    # T30 (Cat 6 + 2 Chained Partials):
+    # 1) Averages middle elements without sorting first (passes already-sorted witness [1, 2, 4, 10], fails unsorted [10, 2, 5])
+    # 2) Sorts and averages even-length (passes witness), but uses mid - 1 on odd-length lists (fails single-element/odd test)
+    by_id["T30"].partial_coverage_candidates = [
+        CandidatePatch(
+            patch_id="T30-c1b-partial1",
+            description="Averages middle two on even length without sorting first (passes sorted witness, fails unsorted)",
+            files={
+                "metrics.py": (
+                    "def median_value(nums):\n"
+                    "    n = len(nums)\n"
+                    "    mid = n // 2\n"
+                    "    if n % 2 == 1:\n"
+                    "        return float(nums[mid])\n"
+                    "    return (nums[mid - 1] + nums[mid]) / 2.0\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        ),
+        CandidatePatch(
+            patch_id="T30-c1c-partial2",
+            description="Sorts and averages even lengths (passes witness) but uses (s[mid-1]+s[mid])/2 unconditionally on odd lengths",
+            files={
+                "metrics.py": (
+                    "def median_value(nums):\n"
+                    "    s = sorted(nums)\n"
+                    "    mid = len(s) // 2\n"
+                    "    return (s[mid - 1] + s[mid]) / 2.0\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        ),
+    ]
+
+    # Lossy narrative summarization distractors on 4 stateful/multi-file tasks (T07, T16, T17, T18)
+    by_id["T07"].lossy_distractor_candidates = [
+        CandidatePatch(
+            patch_id="T07-lossy-distractor",
+            description="Only checks parentheses count without square/curly brackets when trace is lost",
+            files={
+                "brackets.py": (
+                    "def is_balanced(expr):\n"
+                    "    return expr.count('(') == expr.count(')')\n"
+                )
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+    by_id["T16"].lossy_distractor_candidates = [
+        CandidatePatch(
+            patch_id="T16-lossy-distractor",
+            description="Uses <= token['exp'] off-by-one boundary after lossy summary strips exact timestamp trace",
+            files={
+                "auth_tokens.py": "def issue_token(user_id, issued_at_s, ttl_s):\n    return {'uid': user_id, 'exp': issued_at_s + ttl_s}\n",
+                "session_guard.py": "def is_token_valid(token, now_s):\n    return bool(token.get('uid')) and now_s <= token['exp']\n",
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+    by_id["T17"].lossy_distractor_candidates = [
+        CandidatePatch(
+            patch_id="T17-lossy-distractor",
+            description="Normalizes email but forgets to strip whitespace on user name across schema.py",
+            files={
+                "schema.py": "def normalize_user(name, email):\n    return {'name': name, 'email': email.strip().lower()}\n",
+                "serializer.py": "from schema import normalize_user\ndef serialize_user(name, email):\n    rec = normalize_user(name, email)\n    return f\"{rec['name']}<{rec['email']}>\"\n",
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
+    by_id["T18"].lossy_distractor_candidates = [
+        CandidatePatch(
+            patch_id="T18-lossy-distractor",
+            description="Uses strict cost < quota instead of cost <= quota when cross-module contract is summarized",
+            files={
+                "rate_limiter.py": "def consume(quota, cost):\n    if cost < quota:\n        return (True, quota - cost)\n    return (False, quota)\n",
+                "api_gateway.py": "from rate_limiter import consume\ndef handle_request(quota, cost):\n    allowed, _ = consume(quota, cost)\n    return 200 if allowed else 429\n",
+            },
+            is_known_regression=False,
+            is_valid_solution=False,
+            contract_version="v1",
+        )
+    ]
 
 
 def get_tasks_by_id() -> Dict[str, TaskSpec]:
     """Returns a dictionary mapping task_id -> TaskSpec."""
     return {t.task_id: t for t in get_all_tasks()}
+
