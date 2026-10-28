@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use CEGAR-Harness in your research or engineering projects, please cite it using the metadata below."
+type: software
+title: "CEGAR-Harness: Regression-Aware Context Compaction & Witness Replay for Coding Agents"
+version: "0.2.0"
+date-released: "2026-10-28"
+url: "https://github.com/iyedM/cegar-harness"
+repository-code: "https://github.com/iyedM/cegar-harness"
+license: MIT
+authors:
+  - family-names: "Mohamed"
+    given-names: "Iyed"
+    affiliation: "ESPRIT — School of Engineering and Technology"
+    email: "iyed.mohamed@esprit.tn"
+keywords:
+  - coding-agents
+  - context-compaction
+  - counterexample-guided-refinement
+  - regression-testing
+  - model-context-protocol
+  - witness-replay
+preferred-citation:
+  type: report
+  title: "CEGAR-Harness: Regression-Aware Context Compaction and Versioned Witness Replay for Autonomous Coding Agents"
+  authors:
+    - family-names: "Mohamed"
+      given-names: "Iyed"
+      affiliation: "ESPRIT — School of Engineering and Technology"
+  year: 2026
+  month: 10
+  url: "https://github.com/iyedM/cegar-harness/blob/main/docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf"
