@@ -425,6 +425,16 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     let OVERVIEW = null;
     let CURRENT_COMPACTION = null;
 
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function switchTab(name, btn) {
       document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('nav.tabs button').forEach(el => el.classList.remove('active'));
@@ -460,8 +470,8 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
       const resp = await fetch(`/api/compaction?task_id=${encodeURIComponent(taskId)}`);
       CURRENT_COMPACTION = await resp.json();
       document.getElementById('comp-task-meta').innerHTML =
-        `<b>Specification:</b> ${CURRENT_COMPACTION.specification} | ` +
-        `<b>Ledger Witnesses for ${taskId}:</b> ${CURRENT_COMPACTION.ledger_records.length}`;
+        `<b>Specification:</b> ${escapeHtml(CURRENT_COMPACTION.specification)} | ` +
+        `<b>Ledger Witnesses for ${escapeHtml(taskId)}:</b> ${escapeHtml(CURRENT_COMPACTION.ledger_records.length)}`;
       renderCompactionPanes();
     }
 
@@ -476,7 +486,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         const badge = c.witness_predicate_retained
           ? '<span class="badge badge-pass">WITNESS RETAINED</span>'
           : '<span class="badge badge-block">WITNESS LOST</span>';
-        return `${c.strategy} — ${c.tokens_before} → ${c.tokens_after} tokens (${c.compression_ratio_pct}% saved) ${badge}`;
+        return `${escapeHtml(c.strategy)} — ${escapeHtml(c.tokens_before)} → ${escapeHtml(c.tokens_after)} tokens (${escapeHtml(c.compression_ratio_pct)}% saved) ${badge}`;
       };
       document.getElementById('comp-left-header').innerHTML = fmtHeader(left);
       document.getElementById('comp-right-header').innerHTML = fmtHeader(right);
@@ -537,22 +547,22 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 
       const oracleBadge = res.reference_oracle.passed
         ? '<span class="badge badge-pass">PASSED</span>'
-        : `<span class="badge badge-block">FAILED (${res.reference_oracle.failure_predicate})</span>`;
+        : `<span class="badge badge-block">FAILED (${escapeHtml(res.reference_oracle.failure_predicate)})</span>`;
 
       document.getElementById('sb-verdict-box').innerHTML = `
         <div style="margin-bottom:12px;">
-          <b>Gate Status:</b> <span class="badge ${badgeClass}">${g.status}</span>
-          &nbsp;|&nbsp; <b>Triggered By:</b> <code>${g.triggered_by}</code>
-          &nbsp;|&nbsp; <b>Matched CE:</b> <code>${g.matched_ce_id || 'None'}</code>
+          <b>Gate Status:</b> <span class="badge ${badgeClass}">${escapeHtml(g.status)}</span>
+          &nbsp;|&nbsp; <b>Triggered By:</b> <code>${escapeHtml(g.triggered_by)}</code>
+          &nbsp;|&nbsp; <b>Matched CE:</b> <code>${escapeHtml(g.matched_ce_id || 'None')}</code>
         </div>
-        <div style="margin-bottom:10px;"><b>Diagnostic Reason:</b> ${g.reason}</div>
+        <div style="margin-bottom:10px;"><b>Diagnostic Reason:</b> ${escapeHtml(g.reason)}</div>
         <div style="margin-bottom:10px;">
-          <b>Total Gate Latency:</b> <code>${g.latency_ms} ms</code>
-          (Ledger/AST Lookup: <code>${g.ledger_lookup_ms} ms</code>, Isolated Witness Replay: <code>${g.replay_latency_ms} ms</code>)
+          <b>Total Gate Latency:</b> <code>${escapeHtml(g.latency_ms)} ms</code>
+          (Ledger/AST Lookup: <code>${escapeHtml(g.ledger_lookup_ms)} ms</code>, Isolated Witness Replay: <code>${escapeHtml(g.replay_latency_ms)} ms</code>)
         </div>
-        <div style="margin-bottom:10px;"><b>Canonical AST SHA-256:</b> <code>${g.ast_hash.slice(0, 24)}...</code></div>
+        <div style="margin-bottom:10px;"><b>Canonical AST SHA-256:</b> <code>${escapeHtml(g.ast_hash.slice(0, 24))}...</code></div>
         <hr style="border-color:var(--border);margin:14px 0;" />
-        <div><b>Full Reference Oracle Suite Check:</b> ${oracleBadge} (<code>${res.reference_oracle.duration_ms} ms</code>)</div>
+        <div><b>Full Reference Oracle Suite Check:</b> ${oracleBadge} (<code>${escapeHtml(res.reference_oracle.duration_ms)} ms</code>)</div>
       `;
     }
 
@@ -566,16 +576,16 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         </tr>
       ` + expA.strategies.map(s => `
         <tr>
-          <td><code>${s.strategy}</code></td>
-          <td>${s.mean_tokens_before} → ${s.mean_tokens_after}</td>
-          <td>${s.mean_compression_ratio_pct}%</td>
-          <td>${s.witness_retention_rate_pct}%</td>
-          <td>${s.regressions_blocked_by_gate}</td>
-          <td>${s.unblocked_regression_rate_pct}% [${s.regression_ci95_low_pct}, ${s.regression_ci95_high_pct}]</td>
-          <td>${s.secondary_witnesses_synthesized}</td>
-          <td>${s.turn1_resolution_rate_pct}% (${s.turn1_resolved}/${s.tasks_total})</td>
-          <td><b>${s.resolution_rate_pct}%</b> (${s.tasks_resolved}/${s.tasks_total}) [${s.resolution_ci95_low_pct}, ${s.resolution_ci95_high_pct}]</td>
-          <td>${s.mean_oracle_turns_to_convergence}</td>
+          <td><code>${escapeHtml(s.strategy)}</code></td>
+          <td>${escapeHtml(s.mean_tokens_before)} → ${escapeHtml(s.mean_tokens_after)}</td>
+          <td>${escapeHtml(s.mean_compression_ratio_pct)}%</td>
+          <td>${escapeHtml(s.witness_retention_rate_pct)}%</td>
+          <td>${escapeHtml(s.regressions_blocked_by_gate)}</td>
+          <td>${escapeHtml(s.unblocked_regression_rate_pct)}% [${escapeHtml(s.regression_ci95_low_pct)}, ${escapeHtml(s.regression_ci95_high_pct)}]</td>
+          <td>${escapeHtml(s.secondary_witnesses_synthesized)}</td>
+          <td>${escapeHtml(s.turn1_resolution_rate_pct)}% (${escapeHtml(s.turn1_resolved)}/${escapeHtml(s.tasks_total)})</td>
+          <td><b>${escapeHtml(s.resolution_rate_pct)}%</b> (${escapeHtml(s.tasks_resolved)}/${escapeHtml(s.tasks_total)}) [${escapeHtml(s.resolution_ci95_low_pct)}, ${escapeHtml(s.resolution_ci95_high_pct)}]</td>
+          <td>${escapeHtml(s.mean_oracle_turns_to_convergence)}</td>
         </tr>
       `).join('');
 
@@ -588,17 +598,17 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         </tr>
       ` + expA.ablation_study.map(a => `
         <tr>
-          <td><code>${a.config_id}</code></td>
+          <td><code>${escapeHtml(a.config_id)}</code></td>
           <td>${a.enable_ast_filter ? 'ON' : 'OFF'}</td>
           <td>${a.enable_witness_replay ? 'ON' : 'OFF'}</td>
           <td>${a.enforce_contract_version ? 'ON' : 'OFF'}</td>
-          <td>${a.gate_precision_pct}%</td>
-          <td>${a.regression_recall_pct}%</td>
-          <td><b>${a.gate_f1_pct}%</b></td>
-          <td>${a.cat6_recall_pct}%</td>
-          <td>${a.false_block_rate_pct}%</td>
-          <td>${a.inconclusive_on_evolved_contract}</td>
-          <td>${a.median_gate_latency_ms} / ${a.p95_gate_latency_ms}</td>
+          <td>${escapeHtml(a.gate_precision_pct)}%</td>
+          <td>${escapeHtml(a.regression_recall_pct)}%</td>
+          <td><b>${escapeHtml(a.gate_f1_pct)}%</b></td>
+          <td>${escapeHtml(a.cat6_recall_pct)}%</td>
+          <td>${escapeHtml(a.false_block_rate_pct)}%</td>
+          <td>${escapeHtml(a.inconclusive_on_evolved_contract)}</td>
+          <td>${escapeHtml(a.median_gate_latency_ms)} / ${escapeHtml(a.p95_gate_latency_ms)}</td>
         </tr>
       `).join('');
 
@@ -611,14 +621,14 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         </tr>
       ` + expA.category_breakdown.map(c => `
         <tr>
-          <td><code>${c.category}</code></td>
-          <td>${c.tasks_count}</td>
-          <td>${c.obs_masking_resolved}/${c.tasks_count}</td>
-          <td>${c.cegar_ledger_only_resolved}/${c.tasks_count}</td>
-          <td>${c.cegar_full_turn1_resolved}/${c.tasks_count}</td>
-          <td><b>${c.cegar_full_resolved}/${c.tasks_count}</b></td>
-          <td>${c.cegar_full_secondary_witnesses}</td>
-          <td>${c.cegar_full_inconclusive_gates}</td>
+          <td><code>${escapeHtml(c.category)}</code></td>
+          <td>${escapeHtml(c.tasks_count)}</td>
+          <td>${escapeHtml(c.obs_masking_resolved)}/${escapeHtml(c.tasks_count)}</td>
+          <td>${escapeHtml(c.cegar_ledger_only_resolved)}/${escapeHtml(c.tasks_count)}</td>
+          <td>${escapeHtml(c.cegar_full_turn1_resolved)}/${escapeHtml(c.tasks_count)}</td>
+          <td><b>${escapeHtml(c.cegar_full_resolved)}/${escapeHtml(c.tasks_count)}</b></td>
+          <td>${escapeHtml(c.cegar_full_secondary_witnesses)}</td>
+          <td>${escapeHtml(c.cegar_full_inconclusive_gates)}</td>
         </tr>
       `).join('');
     }
@@ -629,16 +639,28 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 </html>
 """
 
+MAX_POST_BODY_BYTES = 1_048_576
+
 
 def make_ui_handler(app: CEGARInspectorApp) -> type[BaseHTTPRequestHandler]:
     """Creates a request handler class bound to `app`."""
 
     class _Handler(BaseHTTPRequestHandler):
+        def _send_security_headers(self) -> None:
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header(
+                "Content-Security-Policy",
+                "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+            )
+
         def do_GET(self) -> None:  # noqa: N802
             parsed = urllib.parse.urlparse(self.path)
             if parsed.path == "/" or parsed.path == "/index.html":
                 body = _DASHBOARD_HTML.encode("utf-8")
                 self.send_response(200)
+                self._send_security_headers()
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
@@ -663,13 +685,37 @@ def make_ui_handler(app: CEGARInspectorApp) -> type[BaseHTTPRequestHandler]:
         def do_POST(self) -> None:  # noqa: N802
             parsed = urllib.parse.urlparse(self.path)
             if parsed.path == "/api/evaluate":
-                length = int(self.headers.get("Content-Length", "0"))
-                raw = self.rfile.read(length).decode("utf-8")
+                raw_len = self.headers.get("Content-Length")
+                if raw_len is None:
+                    self._send_json(400, {"error": "Missing Content-Length header"})
+                    return
                 try:
+                    length = int(raw_len)
+                except ValueError:
+                    self._send_json(400, {"error": "Invalid Content-Length header"})
+                    return
+                if length <= 0:
+                    self._send_json(400, {"error": "Content-Length must be positive"})
+                    return
+                if length > MAX_POST_BODY_BYTES:
+                    self.close_connection = True
+                    self._send_json(
+                        413,
+                        {"error": f"Payload Too Large: exceeds {MAX_POST_BODY_BYTES} bytes"},
+                    )
+                    return
+
+                try:
+                    raw = self.rfile.read(length).decode("utf-8")
                     payload = json.loads(raw)
+                    if not isinstance(payload, dict):
+                        raise ValueError("JSON payload must be an object")
+                    raw_files = payload.get("files")
+                    if not isinstance(raw_files, dict) or not raw_files:
+                        raise ValueError("'files' must be a non-empty dictionary")
                     res = app.evaluate_live_patch(
                         task_id=str(payload["task_id"]),
-                        files=dict(payload["files"]),
+                        files={str(k): str(v) for k, v in raw_files.items()},
                         contract_version=str(payload.get("contract_version", "v1")),
                         enable_ast_filter=bool(payload.get("enable_ast_filter", True)),
                         enable_witness_replay=bool(payload.get("enable_witness_replay", True)),
@@ -685,6 +731,7 @@ def make_ui_handler(app: CEGARInspectorApp) -> type[BaseHTTPRequestHandler]:
         def _send_json(self, status: int, data: Dict[str, Any]) -> None:
             body = json.dumps(data).encode("utf-8")
             self.send_response(status)
+            self._send_security_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()

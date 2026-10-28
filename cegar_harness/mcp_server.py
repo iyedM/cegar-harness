@@ -17,12 +17,16 @@ from cegar_harness.replay import IsolatedTestRunner
 from cegar_harness.telemetry import TelemetryRecorder
 
 
+MAX_LINE_BYTES = 2_097_152
+
+
 class CEGARMCPServer:
     """Standard JSON-RPC 2.0 Model Context Protocol (MCP) Server exposing 4 CEGAR-Harness tools."""
 
     SERVER_NAME = "cegar-harness-mcp"
     SERVER_VERSION = "0.2.0"
     PROTOCOL_VERSION = "2024-11-05"
+    MAX_LINE_BYTES = MAX_LINE_BYTES
 
     def __init__(
         self,
@@ -39,6 +43,32 @@ class CEGARMCPServer:
             telemetry=self.telemetry,
         )
         self.compactor = CompactionController(sliding_window_turns=2)
+
+    @staticmethod
+    def _validate_safe_files_map(raw_files: Any) -> Dict[str, str]:
+        """Validates that `raw_files` is a non-empty dict[str, str] with safe relative paths."""
+        if not isinstance(raw_files, dict) or not raw_files:
+            raise ValueError("'files' must be a non-empty dictionary mapping relative paths to code strings")
+
+        validated: Dict[str, str] = {}
+        for rel_path, content in raw_files.items():
+            if not isinstance(rel_path, str) or not rel_path.strip() or "\x00" in rel_path:
+                raise ValueError(f"Invalid file path in 'files': {rel_path!r}")
+            if not isinstance(content, str):
+                raise ValueError(f"File content for {rel_path!r} must be a string")
+            cleaned = rel_path.strip()
+            p = Path(cleaned)
+            norm_parts = Path(cleaned.replace("\\", "/")).parts
+            if p.is_absolute() or cleaned.startswith(("/", "\\")):
+                raise ValueError(f"Absolute file path rejected: {rel_path}")
+            if ".." in p.parts or ".." in norm_parts:
+                raise ValueError(f"Path traversal ('..') rejected: {rel_path}")
+            if ".git" in p.parts or ".git" in norm_parts:
+                raise ValueError(f"Access to '.git' directory rejected: {rel_path}")
+            if p.name == IsolatedTestRunner.RESERVED_RUNNER_NAME:
+                raise ValueError(f"Reserved runner filename rejected: {rel_path}")
+            validated[cleaned] = content
+        return validated
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """Returns the MCP tool definitions for Claude Code, Cursor, and MCP clients."""
@@ -156,11 +186,39 @@ class CEGARMCPServer:
             },
         ]
 
-    def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def handle_request(self, request: Any) -> Optional[Dict[str, Any]]:
         """Processes a single JSON-RPC 2.0 request dictionary and returns the response dictionary."""
-        method = request.get("method", "")
+        if not isinstance(request, dict):
+            return {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32600, "message": "Invalid Request: expected JSON object"},
+            }
+
         req_id = request.get("id")
-        params = request.get("params") or {}
+        if request.get("jsonrpc") != "2.0":
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": -32600, "message": "Invalid Request: jsonrpc version must be '2.0'"},
+            }
+
+        method = request.get("method")
+        if not isinstance(method, str) or not method.strip():
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": -32600, "message": "Invalid Request: missing or non-string method"},
+            }
+
+        raw_params = request.get("params")
+        if raw_params is not None and not isinstance(raw_params, dict):
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": -32602, "message": "Invalid params: expected object"},
+            }
+        params = raw_params or {}
 
         # Notifications have no 'id' and require no response
         if req_id is None and method.startswith("notifications/"):
@@ -182,8 +240,10 @@ class CEGARMCPServer:
                 result = {"tools": self.list_tools()}
             elif method == "tools/call":
                 tool_name = params.get("name", "")
-                args = params.get("arguments") or {}
-                tool_output = self._call_tool(tool_name, args)
+                args = params.get("arguments")
+                if args is not None and not isinstance(args, dict):
+                    raise ValueError("Tool 'arguments' must be a JSON object")
+                tool_output = self._call_tool(str(tool_name), args or {})
                 result = {
                     "content": [
                         {
@@ -212,7 +272,8 @@ class CEGARMCPServer:
     def _call_tool(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         if name == "cegar_evaluate_patch":
             task_id = str(args["task_id"])
-            files = dict(args["files"])
+            raw_files = args.get("files") if "files" in args else args.get("candidate_files")
+            files = self._validate_safe_files_map(raw_files)
             contract_version = str(args.get("contract_version", "v1"))
             res = self.gate.evaluate(
                 task_id=task_id,
@@ -232,7 +293,9 @@ class CEGARMCPServer:
             }
 
         if name == "cegar_record_witness":
-            files = dict(args["files"])
+            files = self._validate_safe_files_map(args.get("files"))
+            target_file = str(args["target_file"])
+            self._validate_safe_files_map({target_file: ""})
             witness_code = str(args["witness_test_code"])
             predicate = args.get("failure_predicate")
             if not predicate:
@@ -242,7 +305,7 @@ class CEGARMCPServer:
             ce = CounterexampleRecord(
                 ce_id=str(args["ce_id"]),
                 task_id=str(args["task_id"]),
-                target_file=str(args["target_file"]),
+                target_file=target_file,
                 target_symbol=str(args["target_symbol"]),
                 contract_version=str(args.get("contract_version", "v1")),
                 ast_hash=compute_canonical_ast_hash(files),
@@ -317,6 +380,18 @@ class CEGARMCPServer:
         reader = in_stream or sys.stdin
         writer = out_stream or sys.stdout
         for raw_line in reader:
+            if len(raw_line.encode("utf-8", errors="replace")) > self.MAX_LINE_BYTES:
+                err_resp = {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {
+                        "code": -32600,
+                        "message": f"Invalid Request: line exceeds {self.MAX_LINE_BYTES} bytes",
+                    },
+                }
+                writer.write(json.dumps(err_resp) + "\n")
+                writer.flush()
+                continue
             line = raw_line.strip()
             if not line:
                 continue

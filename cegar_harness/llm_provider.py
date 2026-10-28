@@ -7,6 +7,7 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -37,6 +38,8 @@ class LiveLLMClient:
     If not configured, explicitly reports `NOT_EXECUTED_NO_CONFIG` without fabricating outputs.
     """
 
+    ALLOWED_SCHEMES = frozenset({"http", "https"})
+
     def __init__(
         self,
         api_base: Optional[str] = None,
@@ -44,10 +47,25 @@ class LiveLLMClient:
         model_name: Optional[str] = None,
         timeout_seconds: float = 180.0,
     ) -> None:
-        self.api_base = (api_base or os.environ.get("CEGAR_LLM_API_BASE", "")).rstrip("/")
-        self.api_key = api_key or os.environ.get("CEGAR_LLM_API_KEY", "")
-        self.model_name = model_name or os.environ.get("CEGAR_LLM_MODEL", "")
+        raw_base = (
+            api_base if api_base is not None else os.environ.get("CEGAR_LLM_API_BASE", "")
+        ).strip().rstrip("/")
+        if raw_base:
+            self._validate_api_base_url(raw_base)
+        self.api_base = raw_base
+        self.api_key = api_key if api_key is not None else os.environ.get("CEGAR_LLM_API_KEY", "")
+        self.model_name = model_name if model_name is not None else os.environ.get("CEGAR_LLM_MODEL", "")
         self.timeout_seconds = timeout_seconds
+
+    @classmethod
+    def _validate_api_base_url(cls, url: str) -> None:
+        """Validates that `url` uses strictly `http` or `https` and has a valid host netloc."""
+        parsed = urllib.parse.urlparse(url)
+        scheme = (parsed.scheme or "").lower()
+        if scheme not in cls.ALLOWED_SCHEMES or not parsed.netloc:
+            raise ValueError(
+                f"Invalid or disallowed LLM api_base URL {url!r}: scheme must be 'http' or 'https' with a valid host."
+            )
 
     @property
     def is_configured(self) -> bool:
@@ -74,6 +92,7 @@ class LiveLLMClient:
                 ),
             )
 
+        self._validate_api_base_url(self.api_base)
         url = f"{self.api_base}/chat/completions"
         headers: Dict[str, str] = {"Content-Type": "application/json"}
         if self.api_key:

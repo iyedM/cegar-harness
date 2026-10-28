@@ -48,6 +48,51 @@ class GitWorkspaceAdapter:
         else:
             raise ValueError("GitWorkspaceAdapter requires either `gate` or `ledger`.")
 
+    def _validate_safe_repo_path(self, rel_path: str) -> Path:
+        """Validates that `rel_path` is strictly inside `self.repo_path` and never touches `.git/`."""
+        if not isinstance(rel_path, str) or not rel_path.strip() or "\x00" in rel_path:
+            raise ValueError(f"Invalid or empty repository path rejected: {rel_path!r}")
+
+        cleaned = rel_path.strip()
+        raw_path = Path(cleaned)
+        norm_parts = Path(cleaned.replace("\\", "/")).parts
+        if raw_path.is_absolute() or cleaned.startswith(("/", "\\")):
+            raise ValueError(f"Absolute path outside repository rejected: {rel_path}")
+        if ".." in raw_path.parts or ".." in norm_parts:
+            raise ValueError(f"Path traversal outside repository rejected: {rel_path}")
+        if ".git" in raw_path.parts or ".git" in norm_parts:
+            raise ValueError(f"Modification of .git directory rejected: {rel_path}")
+
+        target = (self.repo_path / raw_path).resolve()
+        if not target.is_relative_to(self.repo_path) or target == self.repo_path:
+            raise ValueError(f"Path traversal outside repository rejected: {rel_path}")
+
+        rel_to_repo = target.relative_to(self.repo_path)
+        if ".git" in rel_to_repo.parts:
+            raise ValueError(f"Modification of .git directory rejected: {rel_path}")
+
+        return target
+
+    def _validate_unified_diff_headers(self, unified_diff: str) -> None:
+        """Inspects `---` / `+++` / `diff --git` headers in `unified_diff` before invoking `git apply`."""
+        if not isinstance(unified_diff, str) or not unified_diff.strip():
+            raise ValueError("Empty unified diff rejected")
+
+        for line in unified_diff.splitlines():
+            if line.startswith(("+++ ", "--- ")):
+                raw_target = line[4:].strip().split("\t", 1)[0].strip()
+                if raw_target == "/dev/null":
+                    continue
+                if raw_target.startswith(("a/", "b/")):
+                    raw_target = raw_target[2:]
+                self._validate_safe_repo_path(raw_target)
+            elif line.startswith("diff --git "):
+                parts = line[len("diff --git "):].strip().split()
+                for part in parts[:2]:
+                    cleaned = part[2:] if part.startswith(("a/", "b/")) else part
+                    if cleaned != "/dev/null":
+                        self._validate_safe_repo_path(cleaned)
+
     def _collect_repo_python_files(self, overlay_files: Dict[str, str]) -> Dict[str, str]:
         """Collects all non-test Python modules in the repository working tree merged with `overlay_files`."""
         merged: Dict[str, str] = {}
@@ -66,13 +111,15 @@ class GitWorkspaceAdapter:
         contract_version: str = "v1",
     ) -> GitPatchApplicationResult:
         """Applies `candidate_files` to the working tree, runs RegressionGate, and rolls back if REGRESSION_DETECTED."""
+        validated_targets: List[tuple[str, Path, str]] = []
+        for rel_path, new_content in candidate_files.items():
+            target = self._validate_safe_repo_path(rel_path)
+            validated_targets.append((rel_path, target, new_content))
+
         snapshots: Dict[str, Optional[str]] = {}
         modified_paths: List[str] = []
 
-        for rel_path, new_content in candidate_files.items():
-            target = (self.repo_path / rel_path).resolve()
-            if not str(target).startswith(str(self.repo_path)):
-                raise ValueError(f"Path traversal outside repository rejected: {rel_path}")
+        for rel_path, target, new_content in validated_targets:
             if target.exists():
                 snapshots[rel_path] = target.read_text(encoding="utf-8")
             else:
@@ -128,9 +175,10 @@ class GitWorkspaceAdapter:
         contract_version: str = "v1",
     ) -> GitPatchApplicationResult:
         """Applies a unified `git diff` patch via `git apply`, evaluates RegressionGate, and rolls back on regression."""
+        self._validate_unified_diff_headers(unified_diff)
         snapshots: Dict[str, Optional[str]] = {}
         for rel_path in tracked_files:
-            target = (self.repo_path / rel_path).resolve()
+            target = self._validate_safe_repo_path(rel_path)
             snapshots[rel_path] = target.read_text(encoding="utf-8") if target.exists() else None
 
         proc = subprocess.run(
@@ -146,14 +194,15 @@ class GitWorkspaceAdapter:
 
         candidate_files: Dict[str, str] = {}
         for rel_path in tracked_files:
-            target = self.repo_path / rel_path
+            target = self._validate_safe_repo_path(rel_path)
             if target.exists():
                 candidate_files[rel_path] = target.read_text(encoding="utf-8")
 
         diff_text = self.get_working_diff()
+        eval_files = self._collect_repo_python_files(candidate_files)
         gate_res = self.gate.evaluate(
             task_id=task_id,
-            candidate_files=candidate_files,
+            candidate_files=eval_files,
             current_contract_version=contract_version,
         )
 
