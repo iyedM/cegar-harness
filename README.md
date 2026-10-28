@@ -3,7 +3,7 @@
 [![CI](https://github.com/iyedM/cegar-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/iyedM/cegar-harness/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Technical Report](https://img.shields.io/badge/PDF-11--Page_Technical_Report-b31b1b.svg)](docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf)
+[![Technical Report](https://img.shields.io/badge/PDF-12--Page_Technical_Report-b31b1b.svg)](docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf)
 
 **CEGAR-Harness** is an open-source research middleware and empirical evaluation harness for autonomous coding agents (*Claude Code*, *Cursor*, *LangGraph*, *OpenHands*). Inspired by Counterexample-Guided Abstraction Refinement (CEGAR), it mitigates **Post-Compaction Regression Loops (PCRL)**—where a coding agent re-introduces a previously refuted bug after context window compaction strips away earlier failure tracebacks—by:
 
@@ -12,7 +12,7 @@
 3. **Gating candidate code patches** through a three-state `RegressionGate` (`PASS`, `REGRESSION_DETECTED`, `INCONCLUSIVE`) backed by an optional syntactic AST canonicalization pre-filter and isolated behavioral **Witness Replay** (`IsolatedTestRunner`), and
 4. **Exposing industrial integration adapters** via a standard **Model Context Protocol (MCP)** JSON-RPC 2.0 server (`cegar-harness mcp-serve`), an atomic **Git Workspace Adapter** with automatic rollback (`GitWorkspaceAdapter`), a **LangGraph Middleware** (`CEGARHarnessMiddleware`), and a zero-dependency **Web Inspector UI** (`cegar-harness ui --port 8080`).
 
-> 📄 **Full Paper / Technical Report (11 Pages, IEEE/arXiv format):** [`docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf`](docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf)
+> 📄 **Full Paper / Technical Report (12 Pages, IEEE/arXiv format):** [`docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf`](docs/CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf)
 
 ---
 
@@ -37,10 +37,15 @@ cegar-harness/
 ├── Dockerfile
 ├── .github/workflows/ci.yml
 ├── docs/
-│   └── CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf  # 11-page IEEE/arXiv Technical Report
+│   ├── CEGAR_Harness_Technical_Report_Iyed_MOHAMED.pdf  # IEEE/arXiv Technical Report
+│   └── figures/
+│       ├── cegar_architecture.svg     # Vector pipeline diagram (Ledger -> Compactor -> 3-State Gate)
+│       ├── strategy_comparison.svg    # Vector bar chart of 5 compaction strategies with 95% Wilson CIs
+│       └── ablation_study.svg         # Vector 4-way RegressionGate ablation & Cat. 6 syntactic recall
 ├── scripts/
 │   ├── run_benchmark.sh               # Reproducible end-to-end test + benchmark pipeline
-│   └── generate_technical_report.py   # Generates the 11-page PDF report from live JSON metrics
+│   ├── generate_figures.py            # Generates publication-grade vector SVG figures from JSON metrics
+│   └── generate_technical_report.py   # Generates the IEEE/arXiv PDF report from live JSON metrics
 ├── cegar_harness/
 │   ├── __init__.py
 │   ├── models.py                      # Schemas: GateStatus, CompactionStrategy, BugCategory, CounterexampleRecord
@@ -50,6 +55,7 @@ cegar-harness/
 │   ├── gate.py                        # 3-state RegressionGate (PASS, REGRESSION_DETECTED, INCONCLUSIVE)
 │   ├── compactor.py                   # CompactionController implementing 5 context compaction strategies
 │   ├── git_workspace.py               # GitWorkspaceAdapter: applies patches/diffs with atomic rollback on regression
+│   ├── real_repo_bench.py             # Multi-file Git repository benchmark (6 repos, atomic rollback verification)
 │   ├── mcp_server.py                  # Standard MCP JSON-RPC 2.0 server over stdio (4 tools for Claude Code / Cursor)
 │   ├── langgraph_adapter.py           # CEGARHarnessMiddleware & AgentGraphState for LangGraph workflows
 │   ├── ui_server.py                   # Interactive Web Dashboard (`cegar-harness ui --port 8080`)
@@ -57,15 +63,18 @@ cegar-harness/
 │   ├── llm_provider.py                # LiveLLMClient for multi-turn Experiment B self-repair loop
 │   ├── tasks.py                       # 30 deterministic Python code-repair tasks across 6 categories
 │   ├── benchmark.py                   # Multi-turn Experiment A, 4-Way Ablation, Wilson CIs & Experiment B runner
-│   └── cli.py                         # CLI: `bench`, `live-eval`, `inspect-ledger`, `mcp-serve`, `ui`
+│   └── cli.py                         # CLI: `bench`, `live-eval`, `repo-eval`, `inspect-ledger`, `mcp-serve`, `ui`
 └── tests/
     ├── test_ast_filter.py
     ├── test_compactor.py
     ├── test_gate_and_replay.py
     ├── test_benchmark_integrity.py
     ├── test_mcp_and_git.py
+    ├── test_real_repo_bench.py
     └── test_ui_server.py
 ```
+
+![CEGAR-Harness Architecture](docs/figures/cegar_architecture.svg)
 
 ### Three-State `RegressionGate` Semantics
 
@@ -77,9 +86,9 @@ A naive gatekeeper that blocks every patch failing a historical test will reject
 
 ---
 
-## 3. Experimental Methodology: Multi-Turn Experiment A & Experiment B
+## 3. Experimental Methodology: Experiment A, Live LLM Experiment B & Multi-File Git Evaluation
 
-To maintain strict scientific honesty, **CEGAR-Harness** separates deterministic multi-turn harness evaluation from live stochastic LLM continuation:
+To maintain strict scientific rigor, **CEGAR-Harness** evaluates three complementary experimental regimes:
 
 ### Experiment A: Multi-Turn Controlled Replay Benchmark with Partial Witness Coverage
 Evaluates 5 context compaction strategies and 4 Regression Gate ablation configurations across **30 executable Python code-repair tasks** spanning 6 bug categories (5 tasks per category) under a strict post-compaction reference oracle budget of `max_oracle_turns = 2`:
@@ -90,16 +99,21 @@ Evaluates 5 context compaction strategies and 4 Regression Gate ablation configu
 5. `5_feature_regressions` (`T21`–`T25`): **Contract evolution (`v1` $\rightarrow$ `v2`)** testing how the ledger and gate handle specification drift when an old `v1` witness conflicts with a valid `v2` implementation.
 6. `6_syntactic_variants` (`T26`–`T30`): **Syntactically distinct implementations of the same logical bug** (`for` loop vs. list comprehension, `sorted(set)` vs. `.sort()`, `if val:` vs. `or`, etc.) demonstrating why AST hashing is not semantic equivalence (`T28` and `T29` include 1 partial witness coverage fault; `T30` includes 2 chained partial witness coverage faults).
 
-### Experiment B: Multi-Turn Live Agent Self-Repair Loop (`max_turns = 3`)
-Connects `LiveLLMClient` (`CEGAR_LLM_API_BASE`, `CEGAR_LLM_API_KEY`, `CEGAR_LLM_MODEL`) to an OpenAI-compatible or local Ollama endpoint across up to 3 post-compaction self-repair turns. Under `CEGAR_HARNESS_FULL`, whenever `RegressionGate` returns `REGRESSION_DETECTED`, the harness blocks the candidate before full suite execution, injects the exact `matched_ce_id` and `failure_predicate` diagnostic, and grants a self-repair turn. When no live endpoint is configured, Experiment B explicitly reports `status: "NOT_EXECUTED_NO_CONFIG"` without fabricating or simulating LLM completions.
+### Experiment B: Multi-Turn Live LLM Self-Repair Loop (`llama3:latest` on Local GPU)
+Executes a real multi-turn agent repair loop (`max_turns = 2`) using `LiveLLMClient` connected to a local Ollama server running **`llama3:latest` (8B)** on an **NVIDIA GeForce RTX 2050 GPU** across 6 representative tasks (`T01`, `T06`, `T11`, `T16`, `T21`, `T26`, one per bug category), comparing `LOSSY_SUMMARY` against `CEGAR_HARNESS_FULL`. Under `CEGAR_HARNESS_FULL`, whenever `RegressionGate` returns `REGRESSION_DETECTED`, the harness intercepts the regressive patch before reference oracle execution, injects the exact `matched_ce_id` and `failure_predicate` diagnostic, and triggers a live LLM self-repair turn.
+
+### Multi-File Git Repository Evaluation (`cegar-harness repo-eval`)
+Instantiates **6 real multi-file Git repositories** (`REPO-01` through `REPO-06`, each containing `pkg/__init__.py`, `pkg/models.py`, `pkg/validators.py`, `pkg/service.py`, and `tests/test_suite.py` with Git commit history), records cross-module counterexample witnesses, applies regressive multi-file patches via `GitWorkspaceAdapter`, verifies `RegressionGate` interception and byte-for-byte **atomic Git rollback** (`git status --porcelain == ""`), and validates subsequent multi-file fix patches against the full test suite.
 
 ---
 
-## 4. Empirical Results (Measured on Host via `cegar-harness bench`)
+## 4. Empirical Results (Measured on Host)
 
-All figures below are generated directly by executing `bash scripts/run_benchmark.sh` (see `results/benchmark_report.json`, `results/experiment_a_results.json`, `results/ablation_study.json`, and `results/benchmark_summary.md`).
+All figures and tables below are generated directly from the verified JSON artifacts in `results/` (`results/benchmark_report.json`, `results/experiment_a_results.json`, `results/ablation_study.json`, `results/experiment_b_live_results.json`, and `results/real_repo_eval.json`).
 
 ### 4.1 Multi-Turn Context Compaction Strategies Comparison (30 Tasks, `max_oracle_turns = 2`)
+
+![Strategy Comparison](docs/figures/strategy_comparison.svg)
 
 | Strategy | Mean Tokens (Pre $\rightarrow$ Post) | Compression (%) | Witness Retention (%) | Gate Blocked | Unblocked Reg. (%) [95% Wilson CI] | 2nd-Round CEs | Turn-1 Resolved (%) | Final Resolved (%) [95% Wilson CI] | Mean Oracle Turns |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -111,14 +125,16 @@ All figures below are generated directly by executing `bash scripts/run_benchmar
 
 ### 4.2 Regression Gate 4-Way Ablation Study (30 Tasks, 60 Candidate Evaluations)
 
+![Ablation Study](docs/figures/ablation_study.svg)
+
 Each ablation configuration evaluates both the post-compaction regression candidate (`c1`) and the valid solution candidate (`c2`) across all 30 tasks (60 gate evaluations per configuration):
 
 | Ablation Config | AST Filter | Witness Replay | Contract Ver. | Precision (%) | Recall (%) | F1 (%) | Cat. 6 Syn. Recall (%) | False Block (%) | Inconclusive | Final Resolved (%) | Median / p95 Latency (ms) | Ledger / Replay Overhead (ms) |
 | :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `full_cegar_harness` | ON | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.89 / 21.72 | 0.37 / 11.53 |
-| `ast_filter_only` | ON | OFF | ON | 100.00% | 83.33% (25/30) | 90.91% | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.30 / 0.62 | 0.34 / 0.00 |
-| `witness_replay_only` | OFF | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.59 / 22.00 | 0.35 / 18.68 |
-| `unversioned_ledger` | ON | ON | OFF | 85.71% | 100.00% (30/30) | 92.31% | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 17.64 / 20.70 | 0.29 / 10.60 |
+| `full_cegar_harness` | ON | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.88 / 21.65 | 0.35 / 11.39 |
+| `ast_filter_only` | ON | OFF | ON | 100.00% | 83.33% (25/30) | 90.91% | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.29 / 0.44 | 0.30 / 0.00 |
+| `witness_replay_only` | OFF | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 18.89 / 21.84 | 0.25 / 18.96 |
+| `unversioned_ledger` | ON | ON | OFF | 85.71% | 100.00% (30/30) | 92.31% | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 18.70 / 21.37 | 0.31 / 11.27 |
 
 ### 4.3 Per-Category Multi-Turn Regression & Convergence Breakdown
 
@@ -130,6 +146,34 @@ Each ablation configuration evaluates both the post-compaction regression candid
 | `4_multi_file_changes` | 5 | 5/5 | 4/5 | 0/5 | 4/5 | 0/5 | 4/5 | **4/5** | 2 | 0 |
 | `5_feature_regressions` | 5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 | 5/5 | **5/5** | 0 | 5 |
 | `6_syntactic_variants` | 5 | 5/5 | 2/5 | 5/5 | 2/5 | 0/5 | 2/5 | **4/5** | 4 | 0 |
+
+### 4.4 Experiment B: Live LLM Multi-Turn Self-Repair Loop (`llama3:latest` on Local RTX 2050)
+
+Measured across 6 representative tasks (`T01`, `T06`, `T11`, `T16`, `T21`, `T26`, `max_turns = 2`) using local Ollama `llama3:latest` (`results/experiment_b_live_results.json` and `results/experiment_b_summary.csv`):
+
+| Strategy (`llama3:latest`) | Tasks | Gate Blocked Regressions | Unblocked Reg. Rate (%) | Turn-1 Resolved (%) | Final Resolved (%) [95% Wilson CI] | Mean Turns | Mean LLM Latency (ms) | Prompt / Completion Tokens |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `LOSSY_SUMMARY` | 6 | 0 | 66.67% (4/6) | 16.67% (1/6) | 16.67% (1/6) `[3.01, 56.35]` | 1.83 | 9247.22 | 5280 / 684 |
+| **`CEGAR_HARNESS_FULL`** | **6** | **4** | **0.00% (0/6)** | **50.00% (3/6)** | **66.67% (4/6) `[30.00, 90.32]`** | **1.50** | **4915.46** | **5566 / 399** |
+
+**Per-Task Live `llama3:latest` Trajectory Highlights:**
+- **`T01` (`1_boundary_conditions`), `T26` (`6_syntactic_variants`)**: Under `LOSSY_SUMMARY`, `llama3:latest` loses the falsifying boundary/zero-score witness and fails across both turns (`resolved: False`). Under `CEGAR_HARNESS_FULL`, the pinned counterexample predicate guides `llama3:latest` to generate the exact valid patch on **Turn 1** (`resolved_turn_1: True`).
+- **`T06` (`2_parsers_state_machines` — Quoted CSV Parser)**: On Turn 1 under `CEGAR_HARNESS_FULL`, `llama3:latest` proposes a regex splitter (`re.split(r',(?=(?:[^"]*"[^"]*")*[^"]*$)', line)`) that still fails the quoted-comma witness `CE-T06-LIVE-01`. **`RegressionGate` intercepts and blocks the patch via `witness_replay` (`18.9 ms`)**, injects the exact witness failure diagnostic into the Turn-2 repair prompt, and `llama3:latest` self-repairs on **Turn 2** by synthesizing a character-level quote state machine (`in_quotes = not in_quotes`) that passes the full reference test suite (`resolved_final: True`).
+- **`T21` (`5_feature_regressions` — Contract Drift `v1` $\rightarrow$ `v2`)**: `RegressionGate` detects that `CE-T21-LIVE-01` belongs to `contract_version="v1"` while the task requires `v2`, returning **`INCONCLUSIVE` (`contract_mismatch`)** rather than falsely blocking the candidate patch.
+
+### 4.5 Multi-File Git Repository Evaluation (`cegar-harness repo-eval`, 6 Repositories)
+
+Measured across 6 multi-file Git repositories (`5 files` per repo: `pkg/__init__.py`, `pkg/models.py`, `pkg/validators.py`, `pkg/service.py`, `tests/test_suite.py`) via `GitWorkspaceAdapter` (`results/real_repo_eval.json`):
+
+| Repo ID | Repository Name | Category | Witness ID | Regressive Patch Gate Status | Triggered By | Atomic Git Rollback (`git status` clean & byte-identical) | Valid Multi-File Patch Status | Reg. / Valid Gate Latency (ms) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :--- | ---: |
+| `REPO-01` | `billing_engine` | `1_boundary_conditions` | `CE-REPO-01-01` | `REGRESSION_DETECTED` | `witness_replay` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 28.18 / 30.89 |
+| `REPO-02` | `auth_session_manager` | `2_parsers_state_machines` | `CE-REPO-02-01` | `REGRESSION_DETECTED` | `witness_replay` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 30.28 / 28.00 |
+| `REPO-03` | `rate_limiter_gateway` | `3_exception_handling` | `CE-REPO-03-01` | `REGRESSION_DETECTED` | `witness_replay` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 30.67 / 28.60 |
+| `REPO-04` | `config_hierarchy_loader` | `4_multi_file_changes` | `CE-REPO-04-01` | `REGRESSION_DETECTED` | `witness_replay` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 28.46 / 27.67 |
+| `REPO-05` | `dag_workflow_scheduler` | `5_feature_regressions` | `CE-REPO-05-01` | `REGRESSION_DETECTED` | `ast_filter` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 0.90 / 28.88 |
+| `REPO-06` | `ledger_currency_settlement` | `6_syntactic_variants` | `CE-REPO-06-01` | `REGRESSION_DETECTED` | `witness_replay` | ✅ Verified (`True`) | `PASS` (Suite Passed) | 30.72 / 27.71 |
+| **Summary** | **6 Multi-File Git Repos** | **All 6 Categories** | **6 Witnesses** | **100.0% (6/6) Intercepted** | **5 Replay / 1 AST** | **100.0% (6/6) Atomic Rollback** | **100.0% (6/6) Resolved** | **29.37 / 28.30 (Median)** |
 
 ---
 
@@ -189,7 +233,7 @@ cegar-harness ui --port 8080
 | **ACON** (*Optimizing Context Compression for Long-horizon LLM Agents*, [arXiv:2510.00615](https://arxiv.org/abs/2510.00615), 2025) | Learning compression guidelines from trajectories | Optimizes compression prompts by contrasting successful and failed compressed trajectories. | Operates as a **zero-training deterministic middleware** using a SQLite witness ledger and isolated test replay rather than prompt optimization alone. |
 | **The Complexity Trap** ([JetBrains Research](https://kairos.jetbrains.com/research/publications/complexity-trap), 2025) | Observation masking vs. LLM summarization | Demonstrates that simple observation masking often matches or outperforms expensive LLM trajectory summarization in software engineering agents. | Includes `OBSERVATION_MASKING` and `LOSSY_SUMMARY` as direct baselines and shows how pairing observation pruning with a **Pinned Counterexample Ledger** retains 100% of witness predicates at 48.26% compression. |
 | **ExVerus** ([ICML 2026](https://proceedings.mlr.press/v306/yang26bt.html), 2026) | Counterexample-guided formal proof repair | Uses verifier counterexamples to guide iterative LLM repair of formal Rust/Verus proofs within a single verification loop. | Adapts counterexample retention to **multi-turn Python code-repair compaction boundaries** with explicit `contract_version` tracking (`INCONCLUSIVE` state) to prevent false blocks under requirement drift. |
-| **SWE-bench** ([GitHub](https://github.com/SWE-bench/SWE-bench)) | Real-world repository issue resolution benchmark | Evaluates end-to-end patch resolution across real GitHub issues using Dockerized test harnesses. | Provides a lightweight, self-contained **30-task micro-benchmark** (`Experiment A`) specifically structured to isolate post-compaction regression mechanics, syntactic bug variants, partial witness coverage, and contract evolution in `< 20s`. |
+| **SWE-bench** ([GitHub](https://github.com/SWE-bench/SWE-bench)) | Real-world repository issue resolution benchmark | Evaluates end-to-end patch resolution across real GitHub issues using Dockerized test harnesses. | Provides a lightweight, self-contained **30-task micro-benchmark** (`Experiment A`), a **6-repository multi-file Git benchmark** (`repo-eval`), and a **live LLM self-repair benchmark** (`Experiment B`). |
 
 ---
 
@@ -201,28 +245,35 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 2. Run the full unit, MCP/Git/LangGraph, Web UI, and benchmark integrity test suite (11 tests)
+# 2. Run the full unit, MCP/Git/LangGraph, Multi-File Repo, Web UI, and benchmark integrity test suite (13 tests)
 pytest -v
 
 # 3. Run the end-to-end benchmark script (Tests + Experiment A + Experiment B status)
 bash scripts/run_benchmark.sh
 
-# 4. Launch the interactive Web Inspector UI
+# 4. Run the 6-repository Multi-File Git Evaluation with atomic rollback verification
+cegar-harness repo-eval --output results/real_repo_eval.json
+
+# 5. Regenerate vector SVG figures and the IEEE/arXiv Technical Report PDF
+python scripts/generate_figures.py
+python scripts/generate_technical_report.py
+
+# 6. Launch the interactive Web Inspector UI
 cegar-harness ui --port 8080
 
-# 5. Start the MCP JSON-RPC 2.0 server over stdio
+# 7. Start the MCP JSON-RPC 2.0 server over stdio
 cegar-harness mcp-serve --db results/counterexamples.sqlite
 
-# 6. Inspect stored counterexamples in the SQLite ledger
+# 8. Inspect stored counterexamples in the SQLite ledger
 cegar-harness inspect-ledger --db results/counterexamples.sqlite --task-id T26
 ```
 
-### Running Experiment B Multi-Turn Self-Repair Loop with a Live LLM Endpoint (Optional)
+### Re-Running Experiment B Multi-Turn Self-Repair Loop with Local Ollama (`llama3:latest`)
 
 ```bash
 export CEGAR_LLM_API_BASE="http://localhost:11434/v1"
-export CEGAR_LLM_MODEL="qwen2.5-coder:7b"
+export CEGAR_LLM_MODEL="llama3:latest"
 export CEGAR_LLM_API_KEY="ollama"
-cegar-harness live-eval --max-tasks 5
+cegar-harness live-eval --task-ids T01,T06,T11,T16,T21,T26 --max-turns 2 --output-dir results
 ```
 

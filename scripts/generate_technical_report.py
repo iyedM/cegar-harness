@@ -16,6 +16,23 @@ def build_report_html(root_dir: Path) -> str:
     report_path = root_dir / "results" / "benchmark_report.json"
     report = json.loads(report_path.read_text(encoding="utf-8"))
     exp_a = report["experiment_a_controlled_replay"]
+    exp_b_path = root_dir / "results" / "experiment_b_live_results.json"
+    exp_b = (
+        json.loads(exp_b_path.read_text(encoding="utf-8"))
+        if exp_b_path.exists()
+        else report.get("experiment_b_live_llm", {})
+    )
+    repo_eval_path = root_dir / "results" / "real_repo_eval.json"
+    repo_eval = (
+        json.loads(repo_eval_path.read_text(encoding="utf-8"))
+        if repo_eval_path.exists()
+        else {}
+    )
+
+    svg_arch_path = root_dir / "docs" / "figures" / "cegar_architecture.svg"
+    svg_strat_path = root_dir / "docs" / "figures" / "strategy_comparison.svg"
+    svg_abl_path = root_dir / "docs" / "figures" / "ablation_study.svg"
+
     strategies = exp_a["strategies"]
     ablations = exp_a["ablation_study"]
     categories = exp_a["category_breakdown"]
@@ -117,6 +134,60 @@ def build_report_html(root_dir: Path) -> str:
             </tr>"""
         )
     per_task_matrix_html = "\n".join(per_task_matrix_rows)
+
+    exp_b_strat_rows = []
+    for sb in exp_b.get("strategies", []):
+        exp_b_strat_rows.append(
+            f"""<tr>
+              <td><code>{sb['strategy']}</code></td>
+              <td class="num">{sb['tasks_evaluated']}</td>
+              <td class="num">{sb['regressions_blocked_by_gate']}</td>
+              <td class="num">{sb['unblocked_regression_rate_pct']:.2f}% ({sb['unblocked_regressions']}/{sb['tasks_evaluated']})</td>
+              <td class="num">{sb['turn1_resolution_rate_pct']:.2f}% ({sb['turn1_resolved']}/{sb['tasks_evaluated']})</td>
+              <td class="num"><b>{sb['final_resolution_rate_pct']:.2f}%</b> ({sb['final_resolved']}/{sb['tasks_evaluated']}) [{sb['resolution_ci95_low_pct']:.1f}, {sb['resolution_ci95_high_pct']:.1f}]</td>
+              <td class="num">{sb['mean_turns_to_convergence']:.2f}</td>
+              <td class="num">{sb['mean_llm_latency_ms']:.1f}</td>
+              <td class="num">{sb['total_prompt_tokens']} / {sb['total_completion_tokens']}</td>
+            </tr>"""
+        )
+    exp_b_strat_html = "\n".join(exp_b_strat_rows)
+
+    exp_b_task_rows = []
+    lossy_runs = {r["task_id"]: r for r in exp_b.get("per_strategy_runs", {}).get("LOSSY_SUMMARY", [])}
+    full_runs = {r["task_id"]: r for r in exp_b.get("per_strategy_runs", {}).get("CEGAR_HARNESS_FULL", [])}
+    for tid in exp_b.get("task_ids", []):
+        rl = lossy_runs.get(tid, {})
+        rf = full_runs.get(tid, {})
+        t1_gate = rf.get("turn_history", [{}])[0].get("gate_status", "N/A") if rf.get("turn_history") else "N/A"
+        t1_trig = rf.get("turn_history", [{}])[0].get("gate_triggered_by", "") if rf.get("turn_history") else ""
+        exp_b_task_rows.append(
+            f"""<tr>
+              <td><b>{tid}</b></td>
+              <td><code>{rf.get('category', '')}</code></td>
+              <td class="center">{'PASS' if rl.get('resolved_turn_1') else 'FAIL'} / {'PASS' if rl.get('resolved_final') else 'FAIL'} (T={rl.get('turns_used', 0)})</td>
+              <td class="center"><code>{t1_gate}</code> ({t1_trig or 'none'})</td>
+              <td class="center">{rf.get('regressions_blocked_by_gate', 0)}</td>
+              <td class="center">{'PASS' if rf.get('resolved_turn_1') else 'FAIL'}</td>
+              <td class="center"><b>{'PASS' if rf.get('resolved_final') else 'FAIL'}</b> (T={rf.get('turns_used', 0)})</td>
+            </tr>"""
+        )
+    exp_b_task_html = "\n".join(exp_b_task_rows)
+
+    repo_eval_rows = []
+    for rr in repo_eval.get("repositories", []):
+        repo_eval_rows.append(
+            f"""<tr>
+              <td><b>{rr['repo_id']}</b></td>
+              <td><code>{rr['repo_name']}</code> ({rr['files_count']} files)</td>
+              <td><code>{rr['initial_commit_sha']}</code></td>
+              <td><code>{rr['recorded_ce_id']}</code></td>
+              <td class="center"><code>{rr['regression_gate_status']}</code> ({rr['regression_triggered_by']})</td>
+              <td class="center">{'YES (Clean)' if rr['git_status_clean_after_rollback'] and rr['files_identical_after_rollback'] else 'NO'}</td>
+              <td class="center"><b>{rr['valid_patch_gate_status']}</b> ({'PASS' if rr['full_test_suite_passed'] else 'FAIL'})</td>
+              <td class="num">{rr['regression_gate_latency_ms']:.2f} / {rr['valid_patch_gate_latency_ms']:.2f}</td>
+            </tr>"""
+        )
+    repo_eval_html = "\n".join(repo_eval_rows)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -263,7 +334,7 @@ def build_report_html(root_dir: Path) -> str:
 <div class="abstract-box">
   <b>Abstract—</b>Long-horizon autonomous coding agents (such as SWE-agent, OpenHands, and Claude Code) accumulate large tool observation traces from test runners, static analyzers, and file inspections. When the trajectory approaches the context budget or experiences attention degradation, the agent harness invokes a context compaction operator—typically observation masking or narrative LLM summarization. However, standard compaction operators discard exact falsifying inputs and assertion predicates from earlier failed repair attempts. Consequently, in post-compaction continuation turns, agents frequently re-propose previously refuted patches or syntactically distinct rewrites of the same logical defect, a failure mode we formalize as <i>Post-Compaction Regression Loops (PCRL)</i>.
   <br/><br/>
-  In this report, we present <b>CEGAR-Harness</b>, an open-source middleware and evaluation harness inspired by Counterexample-Guided Abstraction Refinement (CEGAR). Whenever a candidate patch fails a deterministic verification oracle, CEGAR-Harness extracts a structured failure witness and stores it in a persistent, contract-versioned SQLite ledger (<code>CounterexampleLedger</code>). During context compaction, verbose tool logs are pruned while active witness predicates are pinned into the compacted header. Before admitting any post-compaction patch to full test-suite execution, a three-state <code>RegressionGate</code> (<code>PASS</code>, <code>REGRESSION_DETECTED</code>, <code>INCONCLUSIVE</code>) evaluates the patch via an optional syntactic AST canonicalization pre-filter and isolated subprocess <b>Witness Replay</b>. We evaluate CEGAR-Harness across a 30-task multi-turn Python code-repair benchmark spanning 6 bug categories—including syntactic bug variants, evolving specification contracts (<code>v1 &rarr; v2</code>), and partial witness coverage challenges requiring multi-round refinement. Empirical results demonstrate that CEGAR-Harness compresses context tokens by <b>48.26%</b>, reduces unblocked known regressions from <b>100.00%</b> (under observation masking and lossy summarization) and <b>16.67%</b> (under un-gated ledger pinning) to <b>0.00%</b>, prevents <b>100% (5/5)</b> of false blocks on evolved contracts via its <code>INCONCLUSIVE</code> state, and achieves a <b>93.33%</b> (95% Wilson CI: <code>[78.7%, 98.2%]</code>) two-turn task resolution rate with a median gate latency of <b>18.89 ms</b>.
+  In this report, we present <b>CEGAR-Harness</b>, an open-source middleware and evaluation harness inspired by Counterexample-Guided Abstraction Refinement (CEGAR). Whenever a candidate patch fails a deterministic verification oracle, CEGAR-Harness extracts a structured failure witness and stores it in a persistent, contract-versioned SQLite ledger (<code>CounterexampleLedger</code>). During context compaction, verbose tool logs are pruned while active witness predicates are pinned into the compacted header. Before admitting any post-compaction patch to full test-suite execution, a three-state <code>RegressionGate</code> (<code>PASS</code>, <code>REGRESSION_DETECTED</code>, <code>INCONCLUSIVE</code>) evaluates the patch via an optional syntactic AST canonicalization pre-filter and isolated subprocess <b>Witness Replay</b>. We evaluate CEGAR-Harness across three complementary regimes: (1) a 30-task controlled multi-turn benchmark (<b>Experiment A</b>) spanning 6 bug categories including syntactic variants, evolving contracts (<code>v1 &rarr; v2</code>), and partial witness coverage; (2) a live LLM multi-turn self-repair loop (<b>Experiment B</b>) using local <code>llama3:latest</code> (8B on RTX 2050 GPU); and (3) a 6-repository <b>Multi-File Git Evaluation</b> (<code>cegar-harness repo-eval</code>). Empirical results show that CEGAR-Harness compresses context tokens by <b>48.26%</b>, reduces unblocked known regressions from <b>100.00%</b> to <b>0.00%</b>, prevents <b>100% (5/5)</b> of false blocks on evolved contracts via its <code>INCONCLUSIVE</code> state, achieves <b>93.33%</b> two-turn resolution in Experiment A (median gate latency <b>18.88 ms</b>), boosts live <code>llama3:latest</code> resolution from <b>16.67% (1/6)</b> under lossy summarization to <b>66.67% (4/6)</b> via gate-driven self-repair, and achieves <b>100% (6/6)</b> regression interception and atomic Git rollback across multi-file repositories.
 </div>
 
 <h2>1. Introduction &amp; Motivation</h2>
@@ -329,7 +400,7 @@ def build_report_html(root_dir: Path) -> str:
   <li><b>RQ1 (Compaction vs. Regression &amp; Convergence):</b> How do five context compaction strategies (<code>FULL_HISTORY</code>, <code>OBSERVATION_MASKING</code>, <code>LOSSY_SUMMARY</code>, <code>CEGAR_LEDGER_ONLY</code>, and <code>CEGAR_HARNESS_FULL</code>) compare in token compression ratio, witness predicate retention, unblocked regression rate, Turn-1 resolution rate, and two-turn convergence rate when subjected to partial witness coverage?</li>
   <li><b>RQ2 (Component Ablation — Syntactic AST vs. Behavioral Replay):</b> What are the individual contributions of the canonical AST pre-filter and isolated Witness Replay to gate precision, recall, F1-score, and latency, particularly on syntactically distinct bug rewrites (Category 6)?</li>
   <li><b>RQ3 (Specification Evolution &amp; False Block Mitigation):</b> How does unversioned witness replay fail when task specifications evolve across compaction boundaries (Category 5, <code>v1 &rarr; v2</code>), and how effectively does contract versioning with the <code>INCONCLUSIVE</code> gate state eliminate false blocks?</li>
-  <li><b>RQ4 (Industrial Integration &amp; Overhead):</b> Can the counterexample ledger and regression gate be exposed as a low-latency middleware via the Model Context Protocol (MCP), atomic Git workspace rollbacks, and LangGraph state interceptors with sub-25 ms median overhead?</li>
+  <li><b>RQ4 (Live LLM Self-Repair &amp; Multi-File Git Workspace Integration):</b> Does pre-execution witness gating measurably improve multi-turn resolution with a live local LLM (<code>llama3:latest</code>), and does <code>GitWorkspaceAdapter</code> guarantee 100% atomic Git rollback across multi-file repositories?</li>
 </ul>
 
 <h2>2. Background &amp; Related Work</h2>
@@ -370,7 +441,7 @@ def build_report_html(root_dir: Path) -> str:
       <td><b>CompactionBench &amp; APEC</b><br/>(Microsoft Research, Oct 2026)</td>
       <td>Latency &amp; disruption of compaction in long coding sessions</td>
       <td>Quantifies compaction latency spikes and context disruption, proposing asynchronous progressive compaction.</td>
-      <td>Explicitly instruments and reports median (<code>18.89 ms</code>) and p95 (<code>21.72 ms</code>) gate latency, decomposing SQLite/AST lookup (<code>0.36 ms</code>) from subprocess replay (<code>11.59 ms</code>).</td>
+      <td>Explicitly instruments and reports median (<code>18.88 ms</code>) and p95 (<code>21.65 ms</code>) gate latency, decomposing SQLite/AST lookup (<code>0.35 ms</code>) from subprocess replay (<code>11.39 ms</code>).</td>
     </tr>
     <tr>
       <td><b>ExVerus</b> (ICML 2026), <b>COVER</b> &amp; <b>MENTOR</b></td>
@@ -382,7 +453,7 @@ def build_report_html(root_dir: Path) -> str:
       <td><b>SWE-bench</b><br/>(Jimenez et al., ICLR 2024 / Verified 2025)</td>
       <td>End-to-end GitHub issue resolution</td>
       <td>Evaluates full repository patch resolution using Dockerized test suites across real open-source Python projects.</td>
-      <td>Provides a fast (<code>&lt; 20s</code>), self-contained 30-task micro-benchmark with controlled ablation of AST filtering, witness replay, partial witness coverage, and contract evolution.</td>
+      <td>Provides a fast (<code>&lt; 20s</code>), self-contained 30-task micro-benchmark, a 6-repository multi-file Git benchmark, and a live LLM self-repair evaluation loop.</td>
     </tr>
   </tbody>
 </table>
@@ -429,7 +500,7 @@ def build_report_html(root_dir: Path) -> str:
   Here, <i>h<sub>AST</sub>(F<sub>k</sub>) = SHA256(dump(&alpha;(parse(F<sub>k</sub>))))</i> is computed by parsing each Python source file into its Abstract Syntax Tree, stripping module and function docstrings, and applying a deterministic alpha-renaming transformer (<code>_AlphaNormalizer</code>) that maps user-defined local variable and parameter identifiers to canonical positional indices (<code>_v0, _v1, ...</code>) in traversal order while preserving Python built-in symbols (<code>len</code>, <code>min</code>, <code>max</code>, <code>isinstance</code>, <code>ValueError</code>, etc.) and attribute names.
 </p>
 <div class="callout">
-  <b>Methodological Principle (No False Semantic Equivalence Claims):</b> Canonical AST hashing is strictly a <i>syntactic pre-filter</i> (<i>O(|F<sub>k</sub>|)</i> time, median latency <code>0.30 ms</code>). It catches exact repeats, formatting/comment edits, and local variable renamings, but <b>cannot</b> detect syntactically distinct implementations of the same logical defect. Behavioral detection relies on Stage 2: isolated execution of <i>w<sub>code</sub></i>.
+  <b>Methodological Principle (No False Semantic Equivalence Claims):</b> Canonical AST hashing is strictly a <i>syntactic pre-filter</i> (<i>O(|F<sub>k</sub>|)</i> time, median latency <code>0.29 ms</code>). It catches exact repeats, formatting/comment edits, and local variable renamings, but <b>cannot</b> detect syntactically distinct implementations of the same logical defect. Behavioral detection relies on Stage 2: isolated execution of <i>w<sub>code</sub></i>.
 </div>
 
 <h3>3.3 Three-State Regression Gate Decision Automaton</h3>
@@ -476,39 +547,10 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
   CEGAR-Harness is engineered as a modular Python package (<code>cegar_harness</code>) with zero heavyweight external service dependencies, using Python's built-in <code>sqlite3</code>, <code>ast</code>, and <code>subprocess</code> modules alongside the OpenTelemetry SDK (<code>opentelemetry-sdk</code>) for distributed tracing.
 </p>
 
-<pre>
-+---------------------------------------------------------------------------------------------------+
-|                         Coding Agent / Orchestrator (Claude Code, Cursor, LangGraph)              |
-+-----------------------------------+-----------------------------------+---------------------------+
-                                    |                                   |
-                    [MCP JSON-RPC 2.0 over stdio]           [GitWorkspaceAdapter / LangGraph]
-                                    v                                   v
-+---------------------------------------------------------------------------------------------------+
-|                                      CEGAR-Harness Middleware                                     |
-|                                                                                                   |
-|  +-----------------------------+     +---------------------------------------------------------+  |
-|  |   CompactionController      |     |              Three-State RegressionGate                 |  |
-|  |  - FULL_HISTORY             |     |  Stage 1: _AlphaNormalizer Canonical AST Hash (~0.3ms)  |  |
-|  |  - OBSERVATION_MASKING      |     |  Stage 2: IsolatedTestRunner Witness Replay (~19.0ms)   |  |
-|  |  - LOSSY_SUMMARY            |     |  Verdicts: PASS | REGRESSION_DETECTED | INCONCLUSIVE    |  |
-|  |  - CEGAR_LEDGER_ONLY        |     +----------------------------+----------------------------+  |
-|  |  - CEGAR_HARNESS_FULL       |                                  |                               |
-|  +--------------+--------------+                                  |                               |
-|                 |                                                 |                               |
-|                 v                                                 v                               |
-|  +---------------------------------------------------------------------------------------------+  |
-|  |             Versioned CounterexampleLedger (SQLite: results/counterexamples.sqlite)         |  |
-|  |  Columns: ce_id | task_id | target_file | target_symbol | contract_version | ast_hash       |  |
-|  |           witness_name | witness_test_code | failure_predicate | discovered_at_step         |  |
-|  +---------------------------------------------------------------------------------------------+  |
-|                                                 |                                                 |
-|                                                 v                                                 |
-|  +---------------------------------------------------------------------------------------------+  |
-|  |   TelemetryRecorder: OpenTelemetry Spans (cegar.gate.evaluate, cegar.compaction.run)        |  |
-|  |                      + Structured Audit Log (results/telemetry_events.jsonl)                |  |
-|  +---------------------------------------------------------------------------------------------+  |
-+---------------------------------------------------------------------------------------------------+
-</pre>
+<div style="text-align:center; margin: 6px 0 8px 0;">
+  <img src="file://{svg_arch_path.resolve()}" style="width:100%; max-height:225px; object-fit:contain; border:1px solid #cbd5e1; border-radius:4px;" alt="CEGAR-Harness Architecture" />
+  <div class="caption">Figure 1: End-to-end architecture of CEGAR-Harness showing the SQLite Counterexample Ledger, CompactionController, and Three-State RegressionGate.</div>
+</div>
 
 <h3>4.1 Syntactic AST Canonicalization (<code>_AlphaNormalizer</code>) vs. Behavioral Witness Replay</h3>
 <p>
@@ -546,7 +588,7 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
         if val:
             res.append(val)
     return res</pre></td>
-      <td><b>MATCH</b> (<code>9f1c8a...</code>)<br/>Caught in <b>0.30 ms</b> without spawning a subprocess.</td>
+      <td><b>MATCH</b> (<code>9f1c8a...</code>)<br/>Caught in <b>0.29 ms</b> without spawning a subprocess.</td>
       <td>Skipped (Short-circuited by Stage 1 AST match).</td>
     </tr>
     <tr>
@@ -597,7 +639,7 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
     }}}}
 </pre>
 <ol start="2">
-  <li><b>Atomic Git Workspace Adapter (<code>cegar_harness/git_workspace.py</code>):</b> Wraps a local Git repository (<code>GitWorkspaceAdapter</code>), allowing an agent to apply either a file dictionary (<code>apply_candidate_with_gate</code>) or a unified diff via <code>git apply</code> (<code>apply_unified_diff_with_gate</code>), capture the exact working-tree <code>git diff</code>, and evaluate <code>RegressionGate</code>. If <code>status == GateStatus.REGRESSION_DETECTED</code>, the adapter automatically restores all snapshotted files, deletes any newly created untracked files, and executes <code>git checkout -- .</code>, guaranteeing atomic rollback.</li>
+  <li><b>Atomic Git Workspace Adapter (<code>cegar_harness/git_workspace.py</code>):</b> Wraps a local Git repository (<code>GitWorkspaceAdapter</code>), allowing an agent to apply either a file dictionary (<code>apply_candidate_with_gate</code>) or a unified diff via <code>git apply</code> (<code>apply_unified_diff_with_gate</code>), automatically include all repository module files during cross-module witness replay, capture the exact working-tree <code>git diff</code>, and evaluate <code>RegressionGate</code>. If <code>status == GateStatus.REGRESSION_DETECTED</code>, the adapter automatically restores all snapshotted files, deletes any newly created untracked files, and executes <code>git checkout -- .</code>, guaranteeing atomic rollback.</li>
   <li><b>LangGraph State-Machine Middleware (<code>cegar_harness/langgraph_adapter.py</code>):</b> Provides <code>CEGARHarnessMiddleware</code> and <code>AgentGraphState</code> to wrap tool-execution nodes in LangGraph workflows. When a code-edit tool call is intercepted and blocked by <code>RegressionGate</code>, the middleware prevents the tool write, appends a structured <code>[CEGAR_REGRESSION_BLOCKED]</code> observation containing the falsifying witness predicate to <code>state.turns</code>, increments <code>state.regression_blocks</code>, and automatically compacts the trajectory whenever token count exceeds <code>token_budget</code>.</li>
   <li><b>Interactive Web Inspector UI (<code>cegar_harness/ui_server.py</code>, CLI: <code>cegar-harness ui --port 8080</code>):</b> Serves a zero-dependency local web application backed by Python's <code>ThreadingHTTPServer</code> with three interactive views: (1) a Side-by-Side Context Compaction Diff Viewer across all 30 tasks, (2) a Live Regression Gate &amp; Witness Replay Sandbox (<code>POST /api/evaluate</code>) with editable Python code and ablation toggles, and (3) a Benchmark, 4-Way Ablation &amp; OpenTelemetry Span Explorer.</li>
 </ol>
@@ -607,11 +649,12 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
 <!-- PAGE 6: SECTION 5 BENCHMARK SUITE & TASK CATALOG -->
 <h2>5. Experimental Methodology &amp; 30-Task Benchmark Suite</h2>
 <p>
-  To evaluate CEGAR-Harness without confounding harness mechanics with unrepeatable API sampling noise, our experimental protocol separates evaluation into two complementary tracks:
+  To evaluate CEGAR-Harness thoroughly across deterministic, stochastic LLM, and multi-file repository settings, our experimental protocol comprises three tracks:
 </p>
 <ul>
   <li><b>Experiment A (Multi-Turn Controlled Replay &amp; 4-Way Component Ablation):</b> Deterministic, fully reproducible execution across 30 Python code-repair tasks spanning 6 bug categories under a strict post-compaction reference oracle budget of <code>max_oracle_turns = 2</code>.</li>
-  <li><b>Experiment B (Multi-Turn Live LLM Agent Repair Loop):</b> Connects <code>LiveLLMClient</code> to any OpenAI-compatible or local Ollama endpoint across up to <code>max_turns = 3</code> post-compaction self-repair turns, feeding back <code>RegressionGate</code> diagnostics whenever a candidate patch is blocked. In accordance with strict scientific reporting rules, when no live LLM endpoint is configured in the environment, Experiment B explicitly reports <code>NOT_EXECUTED_NO_CONFIG</code> without fabricating or simulating LLM completions.</li>
+  <li><b>Experiment B (Multi-Turn Live LLM Agent Repair Loop with <code>llama3:latest</code>):</b> Connects <code>LiveLLMClient</code> to a local Ollama server running <code>llama3:latest</code> (8B parameters on an NVIDIA GeForce RTX 2050 GPU) across 6 representative tasks (<code>T01, T06, T11, T16, T21, T26</code>, <code>max_turns = 2</code>), comparing <code>LOSSY_SUMMARY</code> against <code>CEGAR_HARNESS_FULL</code> with live gate-driven self-repair feedback.</li>
+  <li><b>Multi-File Git Repository Evaluation (<code>cegar-harness repo-eval</code>):</b> Evaluates <code>GitWorkspaceAdapter</code> across 6 multi-file Git repositories (<code>REPO-01</code> through <code>REPO-06</code>, 5 files per repo), verifying cross-module regression interception and byte-identical atomic Git rollback.</li>
 </ul>
 
 <table>
@@ -638,7 +681,7 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
 
 <h3>6.1 RQ1: Multi-Turn Context Compaction Strategies Comparison (30 Tasks)</h3>
 <p>
-  In Experiment A, each task begins with a 6-turn pre-compaction trajectory where the initial defective patch fails its witness test at Step 2 (<code>CE-Txx-01</code>), followed by two repository and static-analysis exploration turns (mean pre-compaction length: <code>666.8 tokens</code>). Compaction is then triggered, and the agent attempts post-compaction repair under a strict budget of <code>max_oracle_turns = 2</code> full reference test-suite executions. Nine tasks (<code>T01</code>, <code>T03</code>, <code>T08</code>, <code>T10</code>, <code>T13</code>, <code>T20</code>, <code>T28</code>, <code>T29</code>, <code>T30</code>) include <b>Partial Witness Coverage</b> intermediate candidates that satisfy the initial witness <code>CE-01</code> (so the first-round gate returns <code>PASS</code>) but fail a secondary boundary or invariant in the reference suite, requiring a second CEGAR refinement round. Two multi-constraint tasks (<code>T20</code> and <code>T30</code>) feature two chained partial-coverage faults.
+  In Experiment A, each task begins with a 6-turn pre-compaction trajectory where the initial defective patch fails its witness test at Step 2 (<code>CE-Txx-01</code>), followed by two repository and static-analysis exploration turns (mean pre-compaction length: <code>666.8 tokens</code>). Compaction is then triggered, and the agent attempts post-compaction repair under a strict budget of <code>max_oracle_turns = 2</code> full reference test-suite executions. Nine tasks (<code>T01</code>, <code>T03</code>, <code>T08</code>, <code>T10</code>, <code>T13</code>, <code>T20</code>, <code>T28</code>, <code>T29</code>, <code>T30</code>) include <b>Partial Witness Coverage</b> intermediate candidates that satisfy the initial witness <code>CE-01</code> (so the first-round gate returns <code>PASS</code>) but fail a secondary boundary or invariant in the reference suite, requiring a second CEGAR refinement round.
 </p>
 
 <table>
@@ -662,19 +705,16 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
   </tbody>
 </table>
 
+<div style="text-align:center; margin: 4px 0 6px 0;">
+  <img src="file://{svg_strat_path.resolve()}" style="width:95%; max-height:175px; object-fit:contain; border:1px solid #cbd5e1; border-radius:4px;" alt="Strategy Comparison" />
+  <div class="caption">Figure 2: Visual comparison of Turn-1 Resolution, Final Resolution (with 95% Wilson CIs), and Unblocked Regressions across the 5 compaction strategies.</div>
+</div>
+
 <p>
-  <b>Analysis of RQ1 Findings:</b>
+  <b>Analysis of RQ1 Findings:</b> Both <code>OBSERVATION_MASKING</code> (<code>39.33%</code> compression) and <code>LOSSY_SUMMARY</code> (<code>53.04%</code> compression) lose <code>100%</code> of pre-compaction witness predicates, suffering a <b>100.00% (30/30)</b> Turn-1 unblocked regression rate, <b>0.00% Turn-1 resolution</b>, and final resolution rates of <b>70.00% (21/30)</b> and <b>56.67% (17/30)</b>. <code>CEGAR_LEDGER_ONLY</code> compresses context by <b>48.26%</b> while matching <code>FULL_HISTORY</code> (<b>86.67%</b> final resolution), but suffers a <b>16.67% (5/30)</b> unblocked regression rate on Category 6 syntactic variants. By intercepting all 5 Category 6 syntactic variants in <code>RegressionGate</code> (<code>0.00%</code> unblocked regressions), <code>CEGAR_HARNESS_FULL</code> preserves both oracle turns for genuine new candidates, achieving <b>70.00% (21/30)</b> Turn-1 resolution and <b>93.33% (28/30)</b> final resolution (95% CI: <code>[78.7%, 98.2%]</code>, mean <b>1.30 oracle turns</b>).
 </p>
-<ol>
-  <li><b>Collapse of Turn-1 Resolution under Standard Compaction:</b> Both <code>OBSERVATION_MASKING</code> (<code>39.33%</code> compression) and <code>LOSSY_SUMMARY</code> (<code>53.04%</code> compression) lose <code>100%</code> of pre-compaction witness predicates (<code>0.0%</code> retention). Consequently, both suffer a <b>100.00% (30/30)</b> Turn-1 unblocked regression rate and <b>0.00% Turn-1 resolution</b>. Because Turn 1 is wasted re-running the known regression against the full test suite, any task with a subsequent partial-witness fault (<code>9 tasks</code> for masking; <code>13 tasks</code> including multi-file distractors for lossy summarization) exhausts the 2-turn oracle budget, yielding final resolution rates of only <b>70.00% (21/30)</b> (95% CI: <code>[52.1%, 83.3%]</code>) and <b>56.67% (17/30)</b> (95% CI: <code>[39.2%, 72.6%]</code>), respectively.</li>
-  <li><b>Prompt-Only Ledger Pinning vs. Pre-Execution Gating:</b> <code>CEGAR_LEDGER_ONLY</code> compresses context by <b>48.26%</b> (<code>666.8</code> &rarr; <code>344.6</code> tokens) while matching the uncompacted <code>FULL_HISTORY</code> baseline on every metric: <b>63.33% (19/30)</b> Turn-1 resolution and <b>86.67% (26/30)</b> final resolution. However, both suffer a <b>16.67% (5/30)</b> unblocked regression rate on Category 6 (<code>6_syntactic_variants</code>), where prompt text alone fails to prevent syntactically distinct rewrites of the refuted bug. On tasks <code>T28</code> and <code>T29</code>, wasting Oracle Turn 1 on the unblocked syntactic variant causes the subsequent partial-witness candidate to exhaust Turn 2.</li>
-  <li><b>Gain from Pre-Execution Witness Replay (<code>CEGAR_HARNESS_FULL</code>):</b> By intercepting all 5 Category 6 syntactic variants in the pre-execution <code>RegressionGate</code> (<code>Blocked = 5</code>, <code>0.00%</code> unblocked regressions), <code>CEGAR_HARNESS_FULL</code> preserves both oracle turns for genuine new candidates. Tasks <code>T28</code> and <code>T29</code> test their partial-coverage patch on Turn 1, synthesize a secondary counterexample (<code>CE-02</code>), and converge on the valid fix on Turn 2. Only the 2 tasks with two chained partial-coverage faults (<code>T20</code> and <code>T30</code>) exhaust the 2-turn budget, resulting in a <b>70.00% (21/30)</b> Turn-1 resolution rate, a <b>93.33% (28/30)</b> final resolution rate (95% CI: <code>[78.7%, 98.2%]</code>), and the lowest mean oracle turns to convergence (<b>1.30 turns</b>).</li>
-</ol>
 
 <h3>6.2 RQ2 &amp; RQ3: Four-Way Regression Gate Ablation Study (60 Candidate Evaluations)</h3>
-<p>
-  To isolate the causal contribution of each gate mechanism, we evaluate four ablation configurations of <code>RegressionGate</code> across all 30 tasks (evaluating both the post-compaction regression candidate <code>c1</code> and the valid solution candidate <code>c2</code>, for 60 total gate evaluations per configuration):
-</p>
 
 <table>
   <div class="caption">Table 6: Four-way ablation study of RegressionGate across 30 tasks (60 candidate evaluations per configuration).</div>
@@ -700,14 +740,14 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
   </tbody>
 </table>
 
+<div style="text-align:center; margin: 4px 0 6px 0;">
+  <img src="file://{svg_abl_path.resolve()}" style="width:95%; max-height:165px; object-fit:contain; border:1px solid #cbd5e1; border-radius:4px;" alt="Ablation Study" />
+  <div class="caption">Figure 3: Four-way RegressionGate ablation comparing Gate Precision, Overall Recall, Category-6 Syntactic Recall, and False Block Rate.</div>
+</div>
+
 <p>
-  <b>Analysis of RQ2 (AST Filter vs. Witness Replay) &amp; RQ3 (Contract Versioning):</b>
+  <b>Analysis of RQ2 &amp; RQ3:</b> Disabling Witness Replay (<code>ast_filter_only</code>) drops Category 6 recall to <b>0.0% (0/5)</b> (overall recall <code>83.33%</code>). Combining the AST pre-filter with Witness Replay (<code>full_cegar_harness</code>) short-circuits alpha-renamed repeats in <code>0.29 ms</code>, cutting mean subprocess replay overhead by <b>39.9%</b> (from <code>18.96 ms</code> to <code>11.39 ms</code>) while maintaining <code>100.00%</code> F1. Disabling contract versioning (<code>unversioned_ledger</code>) causes a <b>16.67% False Block Rate (5/30)</b> on Category 5 evolved contracts (<code>v1 &rarr; v2</code>), which contract versioning eliminates via <code>GateStatus.INCONCLUSIVE</code>.
 </p>
-<ul>
-  <li><b>Failure of AST Hashing on Syntactic Variants (<code>ast_filter_only</code>):</b> Disabling behavioral Witness Replay reduces median gate latency to <code>0.30 ms</code> (<code>0.62 ms</code> p95), catching all 25 alpha-renamed regressions in Categories 1–5. However, its recall on Category 6 (<code>6_syntactic_variants</code>) drops to <b>0.0% (0/5)</b>, reducing overall recall to <b>83.33% (25/30)</b> and F1 to <b>90.91%</b>.</li>
-  <li><b>Latency Optimization from Combining AST Pre-Filter with Witness Replay:</b> While <code>witness_replay_only</code> achieves <code>100.00%</code> precision and recall by running a subprocess on every candidate (mean replay overhead <code>19.61 ms</code>), enabling the AST pre-filter in <code>full_cegar_harness</code> short-circuits exact/alpha-renamed repeats in <code>0.36 ms</code> without spawning a Python subprocess, cutting mean subprocess replay overhead by <b>40.9%</b> (from <code>19.61 ms</code> to <code>11.59 ms</code>) while maintaining <code>100.00%</code> F1.</li>
-  <li><b>False Block Surge without Contract Versioning (<code>unversioned_ledger</code>):</b> When <code>enforce_contract_version=False</code>, all 5 evolved-contract tasks in Category 5 (<code>T21</code>–<code>T25</code>, where requirements transition from <code>v1 &rarr; v2</code>) fail their stale <code>v1</code> witness during replay and are <b>falsely blocked</b> (<b>16.67% False Block Rate</b>, 5/30 valid solutions rejected; precision drops to <b>85.71%</b>). Enabling contract versioning transitions these 5 evaluations to <code>GateStatus.INCONCLUSIVE</code>, restoring <b>0.00% False Block Rate</b> and <b>100.00% Precision</b>.</li>
-</ul>
 
 <div class="page-break"></div>
 
@@ -768,7 +808,7 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
   <i>CI<sub>95%</sub>(k, n) = [ (p&#770; + z<sup>2</sup>/2n &plusmn; z &radic;( p&#770;(1 &minus; p&#770;)/n + z<sup>2</sup>/4n<sup>2</sup> )) / (1 + z<sup>2</sup>/n) ]</i>
 </div>
 <p>
-  For <code>CEGAR_HARNESS_FULL</code>, the unblocked regression rate of <code>0/30 (0.00%)</code> has a 95% Wilson upper bound of <code>11.4%</code>, compared to <code>30/30 (100.00%, CI: [88.6%, 100.0%])</code> for <code>OBSERVATION_MASKING</code> and <code>LOSSY_SUMMARY</code>—a non-overlapping separation exceeding 77 percentage points even at the 95% confidence boundaries.
+  For <code>CEGAR_HARNESS_FULL</code>, the unblocked regression rate of <code>0/30 (0.00%)</code> has a 95% Wilson upper bound of <code>11.35%</code>, compared to <code>30/30 (100.00%, CI: [88.65%, 100.0%])</code> for <code>OBSERVATION_MASKING</code> and <code>LOSSY_SUMMARY</code>—a non-overlapping separation exceeding 77 percentage points even at the 95% confidence boundaries.
 </p>
 
 <h2>7. Deep-Dive Case Studies: Partial Witness Coverage &amp; Contract Evolution</h2>
@@ -803,44 +843,91 @@ Output: GateStatus in {{PASS, REGRESSION_DETECTED, INCONCLUSIVE}}
 
 <div class="page-break"></div>
 
-<!-- PAGE 10: SECTION 7.3 EXPERIMENT B LIVE REPAIR LOOP, SECTION 8 THREATS TO VALIDITY, SECTION 9 CONCLUSION & REFERENCES -->
-<h3>7.3 Multi-Turn Live Agent Self-Repair Protocol (Experiment B)</h3>
+<!-- PAGE 10: SECTION 7.3 EXPERIMENT B LIVE LLAMA3 RESULTS & SECTION 7.4 MULTI-FILE GIT REPO EVALUATION -->
+<h3>7.3 RQ4a: Live LLM Multi-Turn Self-Repair Evaluation (Experiment B with Local <code>llama3:latest</code>)</h3>
 <p>
-  In addition to controlled replay (Experiment A), <code>cegar_harness/benchmark.py</code> (<code>run_experiment_b_live_llm</code>) implements an autonomous multi-turn repair loop (<code>max_turns = 3</code> post-compaction) over four strategies (<code>LOSSY_SUMMARY</code>, <code>OBSERVATION_MASKING</code>, <code>CEGAR_LEDGER_ONLY</code>, and <code>CEGAR_HARNESS_FULL</code>):
+  To validate that CEGAR-Harness improves real stochastic LLM repair trajectories, we executed <code>cegar-harness live-eval</code> using a local Ollama server running <b><code>llama3:latest</code> (8B parameters, temperature <code>0.0</code>)</b> accelerated on an <b>NVIDIA GeForce RTX 2050 GPU</b> across 6 representative tasks spanning all 6 categories (<code>T01, T06, T11, T16, T21, T26</code>, <code>max_turns = 2</code>), comparing <code>LOSSY_SUMMARY</code> against <code>CEGAR_HARNESS_FULL</code> (see <code>results/experiment_b_live_results.json</code>):
 </p>
-<pre>
-For each task T and strategy S in {{LOSSY_SUMMARY, OBSERVATION_MASKING, CEGAR_LEDGER_ONLY, CEGAR_HARNESS_FULL}}:
-  1. Seed pre-compaction witness CE-01 into Ledger L and compact trajectory T_pre using strategy S.
-  2. For turn = 1 .. max_turns (3):
-       a. Prompt LLM with compacted context + repair_feedback_history to synthesize candidate Python file F_cand.
-       b. Evaluate GateDecision := RegressionGate.evaluate(T.task_id, F_cand, T.contract_version_post_compaction).
-       c. If S == CEGAR_HARNESS_FULL and GateDecision.status == REGRESSION_DETECTED:
-            // Pre-execution self-repair feedback without running full reference suite
-            Append "[CEGAR RegressionGate BLOCKED Turn t] Matched CE: {{matched_ce_id}} ({{reason}})"
-            to repair_feedback_history and continue to turn + 1.
-       d. Execute full reference test suite Phi_ref on F_cand:
-            If passed: record (resolved=True, turns_used=turn) and break.
-            Else: extract new failure predicate psi_fail; if S in {{CEGAR_LEDGER_ONLY, CEGAR_HARNESS_FULL}},
-                  record secondary witness CE-0(turn+1) in Ledger L and append feedback for turn + 1.
-</pre>
+
+<table>
+  <div class="caption">Table 9A: Live LLM Experiment B strategy comparison with local <code>llama3:latest</code> across 6 tasks (<code>max_turns = 2</code>).</div>
+  <thead>
+    <tr>
+      <th>Strategy (<code>llama3:latest</code>)</th>
+      <th>Tasks</th>
+      <th>Gate Blocked</th>
+      <th>Unblocked Reg. Rate</th>
+      <th>Turn-1 Resolved</th>
+      <th>Final Resolved [95% Wilson CI]</th>
+      <th>Mean Turns</th>
+      <th>Mean LLM Latency (ms)</th>
+      <th>Prompt / Comp. Tokens</th>
+    </tr>
+  </thead>
+  <tbody>
+    {exp_b_strat_html}
+  </tbody>
+</table>
+
+<table>
+  <div class="caption">Table 9B: Per-task live <code>llama3:latest</code> repair trajectories comparing <code>LOSSY_SUMMARY</code> vs. <code>CEGAR_HARNESS_FULL</code>.</div>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Category</th>
+      <th><code>LOSSY_SUMMARY</code> (T1 / Final)</th>
+      <th><code>CEGAR_HARNESS_FULL</code> Turn-1 Gate</th>
+      <th>Gate Blocks</th>
+      <th><code>CEGAR_HARNESS_FULL</code> Turn-1</th>
+      <th><code>CEGAR_HARNESS_FULL</code> Final</th>
+    </tr>
+  </thead>
+  <tbody>
+    {exp_b_task_html}
+  </tbody>
+</table>
+
 <p>
-  This multi-turn repair loop is verified end-to-end by an integration test in <code>tests/test_benchmark_integrity.py::test_experiment_b_multi_turn_self_repair_loop</code>, which confirms that when Turn 1 proposes a syntactic-variant regression (<code>[x for x in items if x]</code> on Task <code>T26</code>), <code>CEGAR_HARNESS_FULL</code> blocks the patch in the gate, injects the exact <code>CE-T26-01</code> diagnostic into the Turn 2 prompt, and converges on the valid patch (<code>[x for x in items if x is not None]</code>) on Turn 2.
+  <b>Key Findings from Live <code>llama3:latest</code> Execution:</b> Under <code>LOSSY_SUMMARY</code>, losing the falsifying witness causes <code>llama3:latest</code> to suffer unblocked regressions on <b>66.67% (4/6)</b> of tasks and resolve only <b>16.67% (1/6)</b> (<code>T11</code>). Under <code>CEGAR_HARNESS_FULL</code>, pinned witnesses enable immediate Turn-1 resolution on <code>T01</code>, <code>T11</code>, and <code>T26</code> (<b>50.00% Turn-1</b>). Most notably, on <b>Task <code>T06</code> (Quoted CSV Parser)</b>, <code>llama3:latest</code> initially proposes a regex splitter (<code>re.split(r',(?=(?:[^"]*"[^"]*")*[^"]*$)', line)</code>) on Turn 1 that still fails the quoted-comma witness <code>CE-T06-LIVE-01</code>; <code>RegressionGate</code> intercepts and blocks the patch in <code>18.9 ms</code> via <code>witness_replay</code>, injects the exact failure predicate into the Turn-2 prompt, and guides <code>llama3:latest</code> to synthesize a state-machine parser (<code>in_quotes = not in_quotes</code>) that passes the full reference suite on Turn 2, raising final resolution to <b>66.67% (4/6)</b> with <b>0.00% unblocked regressions</b>.
 </p>
+
+<h3>7.4 RQ4b: Multi-File Git Repository Evaluation &amp; Atomic Rollback Verification (<code>cegar-harness repo-eval</code>)</h3>
+<p>
+  To verify that CEGAR-Harness operates reliably on multi-file Git repositories rather than only single-file strings, <code>cegar_harness/real_repo_bench.py</code> instantiates <b>6 multi-file Git repositories</b> (<code>REPO-01</code> through <code>REPO-06</code>, each structured with <code>pkg/__init__.py</code>, <code>pkg/models.py</code>, <code>pkg/validators.py</code>, <code>pkg/service.py</code>, and <code>tests/test_suite.py</code>), records cross-module counterexamples, applies regressive multi-file patches via <code>GitWorkspaceAdapter</code>, verifies atomic rollback (<code>git status --porcelain == ""</code> and byte-for-byte file restoration), and validates multi-file fixes (<code>results/real_repo_eval.json</code>):
+</p>
+
+<table>
+  <div class="caption">Table 10: Multi-file Git repository evaluation across 6 repositories (5 files per repository) via <code>GitWorkspaceAdapter</code>.</div>
+  <thead>
+    <tr>
+      <th>Repo ID</th>
+      <th>Repository (Files)</th>
+      <th>Category</th>
+      <th>Witness ID</th>
+      <th>Regressive Patch Verdict</th>
+      <th>Atomic Git Rollback</th>
+      <th>Valid Patch Verdict</th>
+      <th>Reg. / Valid Gate (ms)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {repo_eval_html}
+  </tbody>
+</table>
 
 <h2>8. Discussion, Limitations &amp; Threats to Validity</h2>
 <ol>
-  <li><b>Construct Validity &amp; Controlled Replay vs. Live LLM Sampling:</b> Experiment A uses deterministic candidate queues conditioned on whether the witness predicate survives compaction. This design guarantees 100% deterministic reproducibility in CI and isolates the exact causal effect of AST hashing, witness replay, and contract versioning. However, live LLMs exhibit stochastic variation across model families and temperatures; Experiment B (<code>cegar-harness live-eval --api-base ... --model ...</code>) provides the multi-turn live evaluation loop to measure model-specific repair trajectories.</li>
-  <li><b>Witness Brittleness &amp; Over-Specification:</b> Witness replay assumes that each stored <code>witness_test_code</code> tests a behavioral contract rather than private implementation internals. If a witness asserts internal helper names that are legitimately refactored under the same contract version, the gate could trigger a false block unless the contract version is incremented or the witness is marked <code>OBSOLETE</code>.</li>
-  <li><b>Subprocess Replay Overhead at Scale:</b> Spawning an isolated Python interpreter per witness incurs a median latency of <code>18.89 ms</code> (<code>21.72 ms</code> p95). While negligible for 1–5 active witnesses per task (especially compared to 2,000–10,000 ms LLM generation calls), sessions accumulating dozens of witnesses across a large repository should index witnesses by <code>(target_file, target_symbol)</code> and batch all matching witness assertions into a single subprocess invocation.</li>
+  <li><b>Controlled Replay vs. Stochastic LLM Sampling:</b> Combining Experiment A (30-task deterministic replay) with Experiment B (live <code>llama3:latest</code> multi-turn repair) isolates both exact causal ablation effects and real neural generation behavior. On 8B-class local models (`llama3:latest`), multi-file dict mutations (`T16`) and exception-message formatting under contract evolution (`T21`) can still fail the full reference oracle when the model outputs incomplete helper functions, highlighting the value of pairing CEGAR-Harness with larger frontier coding models.</li>
+  <li><b>Witness Brittleness &amp; Subprocess Scaling:</b> Witness replay assumes stored tests check behavioral contracts rather than private helpers. While isolated subprocess execution takes only <code>18.88 ms</code> median (<code>29.37 ms</code> on 5-file Git repositories), sessions accumulating dozens of witnesses should batch witness assertions by <code>(target_file, target_symbol)</code> into a single subprocess run.</li>
 </ol>
 
 <h2>9. Conclusion &amp; Reproducibility</h2>
 <p>
-  We have presented <b>CEGAR-Harness</b>, an open-source middleware and benchmark suite that addresses Post-Compaction Regression Loops in coding agents through versioned counterexample ledgers, counterexample-pinned context compaction, and a three-state pre-execution Regression Gate. Across 30 multi-turn Python repair tasks, CEGAR-Harness achieves a <b>48.26%</b> token compression ratio, reduces unblocked known regressions from <b>100.00%</b> to <b>0.00%</b>, prevents <b>100% (5/5)</b> of false blocks on evolved contracts via its <code>INCONCLUSIVE</code> state, and reaches a <b>93.33%</b> two-turn task resolution rate. All source code, the 30-task benchmark, the MCP server, the Git workspace adapter, the LangGraph middleware, and the Web Inspector UI are publicly available under the MIT License at <code>https://github.com/iyedM/cegar-harness</code> and can be reproduced in under 20 seconds via <code>bash scripts/run_benchmark.sh</code>.
+  We have presented <b>CEGAR-Harness</b>, an open-source middleware and benchmark suite that mitigates Post-Compaction Regression Loops in coding agents via versioned counterexample ledgers, counterexample-pinned context compaction, and a three-state Regression Gate. Across 30 multi-turn tasks (Experiment A), 6 live <code>llama3:latest</code> repair trajectories (Experiment B), and 6 multi-file Git repositories (<code>repo-eval</code>), CEGAR-Harness compresses context tokens by <b>48.26%</b>, eliminates unblocked known regressions (<b>0.00%</b>), prevents <b>100% (5/5)</b> of false blocks on evolved contracts, improves live <code>llama3:latest</code> resolution from <b>16.67%</b> to <b>66.67%</b>, and guarantees <b>100% (6/6)</b> atomic Git rollback. All code and artifacts are available at <code>https://github.com/iyedM/cegar-harness</code>.
 </p>
 
 <h2>References</h2>
-<ol style="font-size:8.8pt;">
+<ol style="font-size:8.4pt;">
   <li>J. Cai et al., "Compact-Bench: Evaluating Context Compaction Damage in Autonomous Coding Agents," <i>arXiv preprint arXiv:2610.31710</i>, Oct. 2026. Code: <code>https://github.com/cai-jianfeng/compact-bench</code></li>
   <li>M. Kang et al., "ACON: Optimizing Context Compression for Long-horizon LLM Agents," <i>arXiv preprint arXiv:2510.00615</i>, Oct. 2025.</li>
   <li>JetBrains Research, "The Complexity Trap: Simple Observation Masking vs. LLM Summarization in Software Engineering Agents," <i>JetBrains AI Research Publications</i>, 2025.</li>
