@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from cegar_harness.gate import RegressionGate
+from cegar_harness.ledger import CounterexampleLedger
 from cegar_harness.models import GateEvaluationResult, GateStatus
+from cegar_harness.replay import IsolatedTestRunner
 
 
 @dataclass
@@ -21,15 +23,41 @@ class GitPatchApplicationResult:
     modified_files: List[str]
     git_diff: str
 
+    @property
+    def decision(self) -> GateEvaluationResult:
+        return self.gate_result
+
 
 class GitWorkspaceAdapter:
     """Applies candidate file patches or unified diffs to a local Git repository with atomic rollback on regression."""
 
-    def __init__(self, repo_path: str | Path, gate: RegressionGate) -> None:
+    def __init__(
+        self,
+        repo_path: str | Path,
+        gate: Optional[RegressionGate] = None,
+        ledger: Optional[CounterexampleLedger] = None,
+        runner: Optional[IsolatedTestRunner] = None,
+    ) -> None:
         self.repo_path = Path(repo_path).resolve()
-        self.gate = gate
         if not (self.repo_path / ".git").exists():
             raise ValueError(f"Not a valid Git repository: {self.repo_path}")
+        if gate is not None:
+            self.gate = gate
+        elif ledger is not None:
+            self.gate = RegressionGate(ledger=ledger, runner=runner or IsolatedTestRunner())
+        else:
+            raise ValueError("GitWorkspaceAdapter requires either `gate` or `ledger`.")
+
+    def _collect_repo_python_files(self, overlay_files: Dict[str, str]) -> Dict[str, str]:
+        """Collects all non-test Python modules in the repository working tree merged with `overlay_files`."""
+        merged: Dict[str, str] = {}
+        for py_file in sorted(self.repo_path.rglob("*.py")):
+            rel = py_file.relative_to(self.repo_path).as_posix()
+            if rel.startswith("tests/") or rel.startswith(".git/"):
+                continue
+            merged[rel] = py_file.read_text(encoding="utf-8")
+        merged.update(overlay_files)
+        return merged
 
     def apply_candidate_files(
         self,
@@ -54,9 +82,10 @@ class GitWorkspaceAdapter:
             modified_paths.append(rel_path)
 
         diff_text = self.get_working_diff()
+        eval_files = self._collect_repo_python_files(candidate_files)
         gate_res = self.gate.evaluate(
             task_id=task_id,
-            candidate_files=candidate_files,
+            candidate_files=eval_files,
             current_contract_version=contract_version,
         )
 
@@ -76,6 +105,19 @@ class GitWorkspaceAdapter:
             gate_result=gate_res,
             modified_files=modified_paths,
             git_diff=diff_text,
+        )
+
+    def apply_candidate_with_gate(
+        self,
+        task_id: str,
+        candidate_files: Dict[str, str],
+        contract_version: str = "v1",
+    ) -> GitPatchApplicationResult:
+        """Alias for `apply_candidate_files`."""
+        return self.apply_candidate_files(
+            task_id=task_id,
+            candidate_files=candidate_files,
+            contract_version=contract_version,
         )
 
     def apply_unified_diff(
