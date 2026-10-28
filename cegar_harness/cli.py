@@ -102,6 +102,21 @@ def _cmd_mcp_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ui(args: argparse.Namespace) -> int:
+    from cegar_harness.ui_server import create_ui_server
+
+    server = create_ui_server(host=args.host, port=args.port, results_dir=args.results_dir)
+    host, port = server.server_address
+    print(f"CEGAR Trajectory & Compaction Inspector UI listening on http://{host}:{port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cegar-harness",
@@ -150,6 +165,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional path to JSONL telemetry log file",
     )
     p_mcp.set_defaults(func=_cmd_mcp_serve)
+
+    p_ui = sub.add_parser("ui", help="Launch the interactive CEGAR Trajectory & Compaction Inspector Web UI")
+    p_ui.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    p_ui.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080)")
+    p_ui.add_argument("--results-dir", default="results", help="Path to benchmark results directory")
+    p_ui.set_defaults(func=_cmd_ui)
 
     return parser
 
