@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import csv
 import json
+import math
+import statistics
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -27,6 +29,15 @@ from cegar_harness.tasks import get_all_tasks
 from cegar_harness.telemetry import TelemetryRecorder
 
 
+def _percentile(values: List[float], pct: float) -> float:
+    """Computes a percentile (e.g. 95.0 for p95) on a non-empty list of floats."""
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    idx = min(len(ordered) - 1, max(0, math.ceil((pct / 100.0) * len(ordered)) - 1))
+    return ordered[idx]
+
+
 @dataclass
 class StrategySummaryMetrics:
     """Aggregated empirical metrics for a single CompactionStrategy across all 30 tasks."""
@@ -47,6 +58,8 @@ class StrategySummaryMetrics:
     tasks_resolved: int
     resolution_rate_pct: float
     mean_gate_latency_ms: float
+    median_gate_latency_ms: float
+    p95_gate_latency_ms: float
 
 
 @dataclass
@@ -60,7 +73,9 @@ class AblationSummaryMetrics:
     enforce_contract_version: bool
     total_regression_candidates: int
     regressions_caught: int
+    gate_precision_pct: float
     regression_recall_pct: float
+    gate_f1_pct: float
     caught_by_ast_filter: int
     caught_by_witness_replay: int
     cat6_syntactic_variants_caught: int
@@ -74,6 +89,10 @@ class AblationSummaryMetrics:
     final_tasks_resolved: int
     final_resolution_rate_pct: float
     mean_gate_latency_ms: float
+    median_gate_latency_ms: float
+    p95_gate_latency_ms: float
+    mean_ledger_overhead_ms: float
+    mean_replay_overhead_ms: float
 
 
 def _build_pre_compaction_turns(task: TaskSpec, failure_predicate: str) -> List[TrajectoryTurn]:
@@ -316,9 +335,13 @@ def run_experiment_a(
                 inconclusive_gates=inconclusive_count,
                 tasks_resolved=resolved_count,
                 resolution_rate_pct=round((resolved_count / n_tasks) * 100.0, 2),
-                mean_gate_latency_ms=round(
-                    sum(gate_latencies) / len(gate_latencies), 3
-                )
+                mean_gate_latency_ms=round(sum(gate_latencies) / len(gate_latencies), 3)
+                if gate_latencies
+                else 0.0,
+                median_gate_latency_ms=round(statistics.median(gate_latencies), 3)
+                if gate_latencies
+                else 0.0,
+                p95_gate_latency_ms=round(_percentile(gate_latencies, 95.0), 3)
                 if gate_latencies
                 else 0.0,
             )
@@ -379,6 +402,8 @@ def run_experiment_a(
         inconc_evolved = 0
         tasks_resolved_cnt = 0
         latencies: List[float] = []
+        ledger_overheads: List[float] = []
+        replay_overheads: List[float] = []
 
         for task in task_list:
             c1_reg, c2_fix = task.post_compaction_candidates[0], task.post_compaction_candidates[1]
@@ -390,6 +415,8 @@ def run_experiment_a(
 
             res_c1 = gate.evaluate(task.task_id, c1_reg.files, c1_reg.contract_version)
             latencies.append(res_c1.latency_ms)
+            ledger_overheads.append(res_c1.ledger_lookup_ms)
+            replay_overheads.append(res_c1.replay_latency_ms)
 
             c1_blocked = res_c1.status == GateStatus.REGRESSION_DETECTED
             if c1_blocked:
@@ -405,6 +432,8 @@ def run_experiment_a(
             valid_total += 1
             res_c2 = gate.evaluate(task.task_id, c2_fix.files, c2_fix.contract_version)
             latencies.append(res_c2.latency_ms)
+            ledger_overheads.append(res_c2.ledger_lookup_ms)
+            replay_overheads.append(res_c2.replay_latency_ms)
 
             c2_blocked = res_c2.status == GateStatus.REGRESSION_DETECTED
             if c2_blocked:
@@ -421,6 +450,12 @@ def run_experiment_a(
                 if oracle_res.passed:
                     tasks_resolved_cnt += 1
 
+        tp = reg_caught
+        fp = false_blocks_cnt
+        precision = (tp / (tp + fp)) * 100.0 if (tp + fp) > 0 else 0.0
+        recall = (tp / reg_total) * 100.0 if reg_total > 0 else 0.0
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+
         ablation_summaries.append(
             AblationSummaryMetrics(
                 config_id=cfg_id,
@@ -430,7 +465,9 @@ def run_experiment_a(
                 enforce_contract_version=ver_on,
                 total_regression_candidates=reg_total,
                 regressions_caught=reg_caught,
-                regression_recall_pct=round((reg_caught / reg_total) * 100.0, 2),
+                gate_precision_pct=round(precision, 2),
+                regression_recall_pct=round(recall, 2),
+                gate_f1_pct=round(f1, 2),
                 caught_by_ast_filter=by_ast,
                 caught_by_witness_replay=by_replay,
                 cat6_syntactic_variants_caught=cat6_caught,
@@ -444,6 +481,14 @@ def run_experiment_a(
                 final_tasks_resolved=tasks_resolved_cnt,
                 final_resolution_rate_pct=round((tasks_resolved_cnt / len(task_list)) * 100.0, 2),
                 mean_gate_latency_ms=round(sum(latencies) / len(latencies), 3) if latencies else 0.0,
+                median_gate_latency_ms=round(statistics.median(latencies), 3) if latencies else 0.0,
+                p95_gate_latency_ms=round(_percentile(latencies, 95.0), 3) if latencies else 0.0,
+                mean_ledger_overhead_ms=round(sum(ledger_overheads) / len(ledger_overheads), 3)
+                if ledger_overheads
+                else 0.0,
+                mean_replay_overhead_ms=round(sum(replay_overheads) / len(replay_overheads), 3)
+                if replay_overheads
+                else 0.0,
             )
         )
 
@@ -455,15 +500,18 @@ def run_experiment_a(
         n_cat = len(cat_tasks)
 
         mask_rows = [
-            r for r in per_task_strategy_details[CompactionStrategy.OBSERVATION_MASKING.value]
+            r
+            for r in per_task_strategy_details[CompactionStrategy.OBSERVATION_MASKING.value]
             if r["task_id"] in cat_ids
         ]
         ledger_rows = [
-            r for r in per_task_strategy_details[CompactionStrategy.CEGAR_LEDGER_ONLY.value]
+            r
+            for r in per_task_strategy_details[CompactionStrategy.CEGAR_LEDGER_ONLY.value]
             if r["task_id"] in cat_ids
         ]
         full_rows = [
-            r for r in per_task_strategy_details[CompactionStrategy.CEGAR_HARNESS_FULL.value]
+            r
+            for r in per_task_strategy_details[CompactionStrategy.CEGAR_HARNESS_FULL.value]
             if r["task_id"] in cat_ids
         ]
 
@@ -595,15 +643,22 @@ def _export_reports(
     categories: List[Dict[str, Any]],
 ) -> None:
     """Writes JSON, CSV, and Markdown summary reports to `out_path`."""
-    json_file = out_path / "benchmark_report.json"
-    json_file.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    json_payload = json.dumps(report, indent=2)
+    (out_path / "benchmark_report.json").write_text(json_payload, encoding="utf-8")
+    (out_path / "experiment_a_results.json").write_text(
+        json.dumps(report["experiment_a_controlled_replay"], indent=2), encoding="utf-8"
+    )
+    (out_path / "ablation_study.json").write_text(
+        json.dumps([asdict(a) for a in ablations], indent=2), encoding="utf-8"
+    )
 
-    strat_csv = out_path / "strategy_metrics.csv"
-    with strat_csv.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=list(asdict(strategies[0]).keys()))
-        writer.writeheader()
-        for s in strategies:
-            writer.writerow(asdict(s))
+    for csv_name in ("strategy_metrics.csv", "experiment_a_summary.csv"):
+        strat_csv = out_path / csv_name
+        with strat_csv.open("w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=list(asdict(strategies[0]).keys()))
+            writer.writeheader()
+            for s in strategies:
+                writer.writerow(asdict(s))
 
     ablation_csv = out_path / "ablation_metrics.csv"
     with ablation_csv.open("w", newline="", encoding="utf-8") as fh:
@@ -640,8 +695,8 @@ def _export_reports(
             "",
             "## 2. Experiment A: Regression Gate Ablation Study (30 Tasks, 60 Candidate Evaluations)",
             "",
-            "| Ablation Config | AST Filter | Witness Replay | Contract Ver. | Regression Recall (%) | Cat. 6 Syntactic Recall (%) | False Block Rate (%) | Inconclusive | Final Resolved (%) | Mean Gate Latency (ms) |",
-            "| :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Ablation Config | AST Filter | Witness Replay | Contract Ver. | Precision (%) | Recall (%) | F1 (%) | Cat. 6 Syn. Recall (%) | False Block (%) | Inconclusive | Final Resolved (%) | Median / p95 Latency (ms) |",
+            "| :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for a in ablations:
@@ -649,12 +704,14 @@ def _export_reports(
             f"| `{a.config_id}` | {'ON' if a.enable_ast_filter else 'OFF'} | "
             f"{'ON' if a.enable_witness_replay else 'OFF'} | "
             f"{'ON' if a.enforce_contract_version else 'OFF'} | "
+            f"{a.gate_precision_pct:.2f}% | "
             f"{a.regression_recall_pct:.2f}% ({a.regressions_caught}/{a.total_regression_candidates}) | "
+            f"{a.gate_f1_pct:.2f}% | "
             f"{a.cat6_recall_pct:.1f}% ({a.cat6_syntactic_variants_caught}/{a.cat6_syntactic_variants_total}) | "
             f"{a.false_block_rate_pct:.2f}% ({a.false_blocks_on_valid}/{a.valid_candidates_evaluated}) | "
             f"{a.inconclusive_on_evolved_contract} | "
             f"{a.final_resolution_rate_pct:.2f}% ({a.final_tasks_resolved}/30) | "
-            f"{a.mean_gate_latency_ms:.2f} |"
+            f"{a.median_gate_latency_ms:.2f} / {a.p95_gate_latency_ms:.2f} |"
         )
 
     md_lines.extend(

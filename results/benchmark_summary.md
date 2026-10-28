@@ -12,12 +12,12 @@
 
 ## 2. Experiment A: Regression Gate Ablation Study (30 Tasks, 60 Candidate Evaluations)
 
-| Ablation Config | AST Filter | Witness Replay | Contract Ver. | Regression Recall (%) | Cat. 6 Syntactic Recall (%) | False Block Rate (%) | Inconclusive | Final Resolved (%) | Mean Gate Latency (ms) |
-| :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `full_cegar_harness` | ON | ON | ON | 100.00% (30/30) | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 13.74 |
-| `ast_filter_only` | ON | OFF | ON | 83.33% (25/30) | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.38 |
-| `witness_replay_only` | OFF | ON | ON | 100.00% (30/30) | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 22.09 |
-| `unversioned_ledger` | ON | ON | OFF | 100.00% (30/30) | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 13.05 |
+| Ablation Config | AST Filter | Witness Replay | Contract Ver. | Precision (%) | Recall (%) | F1 (%) | Cat. 6 Syn. Recall (%) | False Block (%) | Inconclusive | Final Resolved (%) | Median / p95 Latency (ms) |
+| :--- | :---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `full_cegar_harness` | ON | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 19.07 / 21.82 |
+| `ast_filter_only` | ON | OFF | ON | 100.00% | 83.33% (25/30) | 90.91% | 0.0% (0/5) | 0.00% (0/30) | 0 | 83.33% (25/30) | 0.30 / 0.65 |
+| `witness_replay_only` | OFF | ON | ON | 100.00% | 100.00% (30/30) | 100.00% | 100.0% (5/5) | 0.00% (0/30) | 5 | 100.00% (30/30) | 19.93 / 22.87 |
+| `unversioned_ledger` | ON | ON | OFF | 85.71% | 100.00% (30/30) | 92.31% | 100.0% (5/5) | 16.67% (5/30) | 0 | 83.33% (25/30) | 18.75 / 21.42 |
 
 ## 3. Experiment A: Per-Category Regression Breakdown
 

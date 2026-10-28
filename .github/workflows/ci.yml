@@ -34,7 +34,10 @@ jobs:
         run: |
           bash scripts/run_benchmark.sh
           test -f results/benchmark_report.json
+          test -f results/experiment_a_results.json
+          test -f results/ablation_study.json
           test -f results/strategy_metrics.csv
+          test -f results/experiment_a_summary.csv
           test -f results/ablation_metrics.csv
           test -f results/category_breakdown.csv
           test -f results/benchmark_summary.md

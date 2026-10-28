@@ -1,0 +1,6 @@
+strategy,tasks_total,mean_tokens_before,mean_tokens_after,mean_compression_ratio_pct,witness_retention_count,witness_retention_rate_pct,regressions_blocked_by_gate,unblocked_regressions,unblocked_regression_rate_pct,false_blocks,false_block_rate_pct,inconclusive_gates,tasks_resolved,resolution_rate_pct,mean_gate_latency_ms,median_gate_latency_ms,p95_gate_latency_ms
+FULL_HISTORY,30,666.8,666.8,0.0,30,100.0,0,5,16.67,0,0.0,0,25,83.33,0.0,0.0,0.0
+OBSERVATION_MASKING,30,666.8,404.9,39.33,0,0.0,0,30,100.0,0,0.0,0,0,0.0,0.0,0.0,0.0
+LOSSY_SUMMARY,30,666.8,312.7,53.04,0,0.0,0,30,100.0,0,0.0,0,0,0.0,0.0,0.0,0.0
+CEGAR_LEDGER_ONLY,30,666.8,344.6,48.26,30,100.0,0,5,16.67,0,0.0,0,25,83.33,0.0,0.0,0.0
+CEGAR_HARNESS_FULL,30,666.8,344.6,48.26,30,100.0,5,0,0.0,0,0.0,5,30,100.0,19.55,19.467,21.249

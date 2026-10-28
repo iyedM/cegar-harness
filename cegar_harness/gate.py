@@ -48,6 +48,7 @@ class RegressionGate:
         start_ns = time.perf_counter_ns()
         ast_hash = compute_canonical_ast_hash(candidate_files)
         records = self.ledger.get_by_task(task_id, include_resolved=True)
+        ledger_lookup_ms = (time.perf_counter_ns() - start_ns) / 1e6
 
         if not records:
             latency_ms = (time.perf_counter_ns() - start_ns) / 1e6
@@ -56,6 +57,8 @@ class RegressionGate:
                 triggered_by="none",
                 reason="No prior counterexamples in ledger for task.",
                 latency_ms=latency_ms,
+                ledger_lookup_ms=ledger_lookup_ms,
+                replay_latency_ms=0.0,
                 witnesses_checked=0,
                 ast_hash=ast_hash,
             )
@@ -78,6 +81,8 @@ class RegressionGate:
                                     f"({ce.contract_version} -> {current_contract_version})."
                                 ),
                                 latency_ms=latency_ms,
+                                ledger_lookup_ms=ledger_lookup_ms,
+                                replay_latency_ms=0.0,
                                 witnesses_checked=0,
                                 ast_hash=ast_hash,
                             )
@@ -90,6 +95,8 @@ class RegressionGate:
                         matched_ce_id=ce.ce_id,
                         reason=f"Canonical AST matches previously refuted patch ({ce.ce_id}: {ce.failure_predicate})",
                         latency_ms=latency_ms,
+                        ledger_lookup_ms=ledger_lookup_ms,
+                        replay_latency_ms=0.0,
                         witnesses_checked=0,
                         ast_hash=ast_hash,
                     )
@@ -98,12 +105,14 @@ class RegressionGate:
 
         # Stage 2: Isolated Witness Replay
         witnesses_checked = 0
+        replay_latency_ms = 0.0
         inconclusive_match: Optional[GateEvaluationResult] = None
 
         if self.enable_witness_replay:
             for ce in records:
                 witnesses_checked += 1
                 exec_res = self.runner.run_test_code(candidate_files, ce.witness_test_code)
+                replay_latency_ms += exec_res.duration_ms
                 if exec_res.execution_error or exec_res.timed_out:
                     latency_ms = (time.perf_counter_ns() - start_ns) / 1e6
                     res = GateEvaluationResult(
@@ -112,6 +121,8 @@ class RegressionGate:
                         matched_ce_id=ce.ce_id,
                         reason=f"Witness replay execution error on {ce.ce_id}: {exec_res.failure_predicate}",
                         latency_ms=latency_ms,
+                        ledger_lookup_ms=ledger_lookup_ms,
+                        replay_latency_ms=replay_latency_ms,
                         witnesses_checked=witnesses_checked,
                         ast_hash=ast_hash,
                     )
@@ -131,6 +142,8 @@ class RegressionGate:
                                 f"active contract ({current_contract_version})."
                             ),
                             latency_ms=latency_ms,
+                            ledger_lookup_ms=ledger_lookup_ms,
+                            replay_latency_ms=replay_latency_ms,
                             witnesses_checked=witnesses_checked,
                             ast_hash=ast_hash,
                         )
@@ -142,6 +155,8 @@ class RegressionGate:
                         matched_ce_id=ce.ce_id,
                         reason=f"Witness {ce.ce_id} ({ce.witness_name}) failed: {exec_res.failure_predicate}",
                         latency_ms=latency_ms,
+                        ledger_lookup_ms=ledger_lookup_ms,
+                        replay_latency_ms=replay_latency_ms,
                         witnesses_checked=witnesses_checked,
                         ast_hash=ast_hash,
                     )
@@ -150,6 +165,8 @@ class RegressionGate:
 
         if inconclusive_match is not None:
             inconclusive_match.latency_ms = (time.perf_counter_ns() - start_ns) / 1e6
+            inconclusive_match.ledger_lookup_ms = ledger_lookup_ms
+            inconclusive_match.replay_latency_ms = replay_latency_ms
             inconclusive_match.witnesses_checked = witnesses_checked
             self._emit_telemetry(task_id, inconclusive_match)
             return inconclusive_match
@@ -160,6 +177,8 @@ class RegressionGate:
             triggered_by="none",
             reason="All applicable counterexample witnesses passed.",
             latency_ms=latency_ms,
+            ledger_lookup_ms=ledger_lookup_ms,
+            replay_latency_ms=replay_latency_ms,
             witnesses_checked=witnesses_checked,
             ast_hash=ast_hash,
         )

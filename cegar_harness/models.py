@@ -63,6 +63,8 @@ class GateEvaluationResult:
     matched_ce_id: Optional[str] = None
     reason: str = ""
     latency_ms: float = 0.0
+    ledger_lookup_ms: float = 0.0
+    replay_latency_ms: float = 0.0
     witnesses_checked: int = 0
     ast_hash: str = ""
 

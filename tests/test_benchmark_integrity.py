@@ -52,7 +52,10 @@ def test_experiment_a_and_b_and_cli_end_to_end(tmp_path: Path, monkeypatch) -> N
 
     for expected_file in (
         "benchmark_report.json",
+        "experiment_a_results.json",
+        "ablation_study.json",
         "strategy_metrics.csv",
+        "experiment_a_summary.csv",
         "ablation_metrics.csv",
         "category_breakdown.csv",
         "benchmark_summary.md",
@@ -73,21 +76,28 @@ def test_experiment_a_and_b_and_cli_end_to_end(tmp_path: Path, monkeypatch) -> N
     assert strategies[CompactionStrategy.CEGAR_HARNESS_FULL.value]["witness_retention_rate_pct"] == 100.0
     assert strategies[CompactionStrategy.CEGAR_HARNESS_FULL.value]["unblocked_regression_rate_pct"] == 0.0
     assert strategies[CompactionStrategy.CEGAR_HARNESS_FULL.value]["resolution_rate_pct"] == 100.0
+    assert strategies[CompactionStrategy.CEGAR_HARNESS_FULL.value]["p95_gate_latency_ms"] >= strategies[CompactionStrategy.CEGAR_HARNESS_FULL.value]["median_gate_latency_ms"]
 
     # Verify Ablation Study causal findings
     ablations = {a["config_id"]: a for a in exp_a["ablation_study"]}
+    assert ablations["full_cegar_harness"]["gate_precision_pct"] == 100.0
     assert ablations["full_cegar_harness"]["regression_recall_pct"] == 100.0
+    assert ablations["full_cegar_harness"]["gate_f1_pct"] == 100.0
     assert ablations["full_cegar_harness"]["cat6_recall_pct"] == 100.0
     assert ablations["full_cegar_harness"]["false_block_rate_pct"] == 0.0
     assert ablations["full_cegar_harness"]["final_resolution_rate_pct"] == 100.0
+    assert ablations["full_cegar_harness"]["mean_ledger_overhead_ms"] >= 0.0
+    assert ablations["full_cegar_harness"]["mean_replay_overhead_ms"] > 0.0
 
     # AST filter alone misses Category 6 syntactic variants
     assert ablations["ast_filter_only"]["cat6_recall_pct"] == 0.0
     assert ablations["ast_filter_only"]["regression_recall_pct"] < 100.0
+    assert ablations["ast_filter_only"]["mean_replay_overhead_ms"] == 0.0
 
-    # Unversioned ledger falsely blocks Category 5 evolved contracts
+    # Unversioned ledger falsely blocks Category 5 evolved contracts (lowering precision)
     assert ablations["unversioned_ledger"]["cat5_evolved_contract_false_blocks"] == 5
     assert ablations["unversioned_ledger"]["false_block_rate_pct"] > 0.0
+    assert ablations["unversioned_ledger"]["gate_precision_pct"] < 100.0
 
     # Experiment B honesty check when unconfigured
     exp_b = report["experiment_b_live_llm"]

@@ -35,15 +35,17 @@ def _cmd_bench(args: argparse.Namespace) -> int:
 
     print("\n=== Regression Gate Ablation Study (60 Candidate Evaluations across 30 Tasks) ===")
     print(
-        f"{'Ablation Config':<24} {'Recall%':>9} {'Cat6Syn%':>9} "
-        f"{'FalseBlk%':>10} {'Inconc':>7} {'Resolved%':>10} {'Latency(ms)':>12}"
+        f"{'Ablation Config':<22} {'Prec%':>7} {'Recall%':>8} {'F1%':>7} {'Cat6Syn%':>9} "
+        f"{'FalseBlk%':>10} {'Inconc':>7} {'Resolved%':>10} {'Med/p95(ms)':>14}"
     )
-    print("-" * 87)
+    print("-" * 102)
     for a in exp_a["ablation_study"]:
+        lat_str = f"{a['median_gate_latency_ms']:.2f}/{a['p95_gate_latency_ms']:.2f}"
         print(
-            f"{a['config_id']:<24} {a['regression_recall_pct']:>8.2f}% {a['cat6_recall_pct']:>8.1f}% "
+            f"{a['config_id']:<22} {a['gate_precision_pct']:>6.2f}% {a['regression_recall_pct']:>7.2f}% "
+            f"{a['gate_f1_pct']:>6.2f}% {a['cat6_recall_pct']:>8.1f}% "
             f"{a['false_block_rate_pct']:>9.2f}% {a['inconclusive_on_evolved_contract']:>7} "
-            f"{a['final_resolution_rate_pct']:>9.2f}% {a['mean_gate_latency_ms']:>11.2f}"
+            f"{a['final_resolution_rate_pct']:>9.2f}% {lat_str:>14}"
         )
 
     print(f"\nArtifacts written to: {out_dir.resolve()}")
